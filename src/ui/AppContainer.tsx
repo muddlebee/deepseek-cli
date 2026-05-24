@@ -3,7 +3,7 @@ import { AppContext } from "./contexts";
 import { App } from "./App";
 import { RawModeProvider } from "./contexts/RawModeContext";
 import { SetupScreen } from "./SetupScreen";
-import { resolveCurrentSettings, writeSettings } from "./App";
+import { readSettings, resolveCurrentSettings, writeSettings } from "./App";
 
 const AppContainer: React.FC<{
   projectRoot: string;
@@ -15,7 +15,8 @@ const AppContainer: React.FC<{
   const [setupDone, setSetupDone] = useState(false);
 
   function handleSetupComplete({ apiKey, baseURL }: { apiKey: string; baseURL: string }): void {
-    writeSettings({ env: { API_KEY: apiKey, BASE_URL: baseURL } });
+    const existing = readSettings() ?? {};
+    writeSettings({ ...existing, env: { ...existing.env, API_KEY: apiKey, BASE_URL: baseURL } });
     setSetupDone(true);
   }
 
