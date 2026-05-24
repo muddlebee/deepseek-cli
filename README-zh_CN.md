@@ -4,7 +4,7 @@
 
 ### 面向终端的 DeepSeek AI 编程助手
 
-[![][npm-release-shield]][npm-release-link] [![][npm-downloads-shield]][npm-downloads-link] [![][github-stars-shield]][github-stars-link] [![][github-issues-shield]][github-issues-link] [![][github-license-shield]][github-license-link]
+[![][github-stars-shield]][github-stars-link] [![][github-issues-shield]][github-issues-link] [![][github-license-shield]][github-license-link]
 
 [English](README.md) · 中文
 
@@ -167,10 +167,7 @@ MIT © [muddlebee](https://github.com/muddlebee)
 ---
 
 <!-- LINK GROUP -->
-[npm-release-link]: https://www.npmjs.com/package/deepseek-cli
-[npm-release-shield]: https://img.shields.io/npm/v/deepseek-cli?color=0ea5e9&labelColor=18181b&logo=npm&logoColor=white&style=flat-square
-[npm-downloads-link]: https://www.npmjs.com/package/deepseek-cli
-[npm-downloads-shield]: https://img.shields.io/npm/dt/deepseek-cli?labelColor=18181b&style=flat-square&color=0ea5e9
+<!-- npm badges temporarily removed until package is published -->
 [github-stars-link]: https://github.com/muddlebee/deepseek-cli/stargazers
 [github-stars-shield]: https://img.shields.io/github/stars/muddlebee/deepseek-cli?color=0ea5e9&labelColor=18181b&style=flat-square
 [github-issues-link]: https://github.com/muddlebee/deepseek-cli/issues
