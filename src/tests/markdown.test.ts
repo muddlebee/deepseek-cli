@@ -38,3 +38,27 @@ test("renderMarkdown handles plain text unchanged in stripped form", () => {
   const result = stripAnsi(renderMarkdown(text));
   assert.equal(result, text);
 });
+
+test("renderMarkdown renders tables with box-drawing borders", () => {
+  const table = "| File | What |\n|------|------|\n| foo.ts | bar |";
+  const result = stripAnsi(renderMarkdown(table));
+  assert.ok(result.includes("┌"), "top-left corner");
+  assert.ok(result.includes("┐"), "top-right corner");
+  assert.ok(result.includes("└"), "bottom-left corner");
+  assert.ok(result.includes("┘"), "bottom-right corner");
+  assert.ok(result.includes("├"), "mid-left separator");
+  assert.ok(result.includes("┼"), "mid cross");
+  assert.ok(result.includes("File"), "header cell preserved");
+  assert.ok(result.includes("foo.ts"), "data cell preserved");
+});
+
+test("renderMarkdown table columns are padded to equal width", () => {
+  const table = "| A | Longer header |\n|---|---------------|\n| x | y |";
+  const lines = stripAnsi(renderMarkdown(table)).split("\n");
+  // All lines in a box table must have equal length
+  const lengths = lines.map((l) => l.length);
+  assert.ok(
+    lengths.every((l) => l === lengths[0]),
+    `unequal line lengths: ${lengths.join(", ")}`
+  );
+});
