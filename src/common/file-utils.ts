@@ -57,6 +57,10 @@ export function ensureParentDirectory(filePath: string): void {
 
 export function hasFileChangedSinceState(filePath: string, state: FileState): boolean {
   const current = readTextFileWithMetadata(filePath);
+  return hasFileChangedAgainstMetadata(current, state);
+}
+
+export function hasFileChangedAgainstMetadata(current: FileReadMetadata, state: FileState): boolean {
   if (current.timestamp <= state.timestamp) {
     return false;
   }

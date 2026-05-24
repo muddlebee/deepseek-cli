@@ -23,6 +23,7 @@ Do not introduce any references to the old names: `deepcode`, `Deep Code`, `DEEP
 - `src/session.ts` — session lifecycle: create, reply, continue, undo, checkpoints
 - `src/prompt.ts` — system prompt construction; identity string is `"You are doku, an interactive CLI tool..."`
 - `src/tests/` — Node test files (`*.test.ts`); run with `tsx --test`
+- `src/tests/live/` — reusable live LLM benchmark harness and scenarios (`live-llm-harness.ts`, `run-live-benchmark.ts`, `scenarios/`)
 - `templates/prompts/` — EJS prompt templates
 - `templates/tools/` — Markdown tool instruction files loaded into the system prompt (`bash.md`, `edit.md`, `write.md`, `read.md.ejs`, `grep.md`, `list-files.md`, `web-search.md`, `update-plan.md`, `ask-user-question.md`)
 - `templates/skills/` — built-in skill templates (`plan-and-execute.md`, `agent-drift-guard.md`)
@@ -44,6 +45,7 @@ Do not introduce any references to the old names: `deepcode`, `Deep Code`, `DEEP
 - `npm run build` — full build: typecheck + lint + format check + bundle + chmod
 - `npm test` — run all test files with `tsx --test`
 - `npm run test:single -- src/tests/<name>.test.ts` — run one test file
+- `npm run test:live -- --runs 1 --scenario src/tests/live/scenarios/tool-call-perf.json` — run live DeepSeek/OpenAI-compatible benchmark scenarios
 - `npm run typecheck` — TypeScript type check without emit
 - `npm run lint` / `npm run lint:fix` — ESLint for `src/`
 - `npm run format` / `npm run format:check` — Prettier for `src/`
@@ -64,6 +66,8 @@ Do not introduce any references to the old names: `deepcode`, `Deep Code`, `DEEP
 - Keep tests deterministic: use temporary directories (`fs.mkdtempSync`) and mock network calls where needed.
 - Temp dir prefixes follow the `doku-<purpose>-` convention.
 - Env var overrides in tests use the `DOKU_*` prefix.
+- Live benchmark runs are opt-in and require valid API credentials (`DOKU_API_KEY` and related model/base URL settings).
+- Live benchmark artifacts (for example `.doku/live-tests/latest-report.json`) are runtime outputs and should not be committed.
 
 ## Commit & Pull Request Guidelines
 

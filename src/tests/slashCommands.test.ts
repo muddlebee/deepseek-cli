@@ -31,6 +31,7 @@ test("buildSlashCommands groups built-ins before skills", () => {
     "mcp",
     "raw",
     "exit",
+    "setup-websearch",
     "__section_skills__",
   ]);
 });

@@ -417,38 +417,47 @@ function readTextFile(filePath: string, offset: number | null, limit: number): T
     };
   }
 
-  const lines = raw.split("\n");
-  if (lines.length === 1 && lines[0] === "") {
-    return {
-      content: "",
-      output: "WARNING: File is empty.",
-      startLine: offset ?? 1,
-      endLine: offset ?? 1,
-      totalLines: 0,
-      isPartialView: false,
-      encoding: metadata.encoding,
-      lineEndings: metadata.lineEndings,
-      timestamp: metadata.timestamp,
-    };
-  }
-
-  const startIndex = offset ? offset - 1 : 0;
-  const endIndex = startIndex + limit;
-  const selected = lines.slice(startIndex, endIndex);
-  const startLine = startIndex + 1;
-  const endLine = selected.length > 0 ? startIndex + selected.length : startLine;
-  const isPartialView = startLine !== 1 || endLine < lines.length;
+  const startLine = offset ?? 1;
+  const { selectedLines, totalLines } = selectLines(raw, startLine, limit);
+  const endLine = selectedLines.length > 0 ? startLine + selectedLines.length - 1 : startLine;
+  const isPartialView = startLine !== 1 || endLine < totalLines;
   return {
-    content: selected.join("\n"),
-    output: formatWithLineNumbers(selected, startLine),
+    content: selectedLines.join("\n"),
+    output: formatWithLineNumbers(selectedLines, startLine),
     startLine,
     endLine,
-    totalLines: lines.length,
+    totalLines,
     isPartialView,
     encoding: metadata.encoding,
     lineEndings: metadata.lineEndings,
     timestamp: metadata.timestamp,
   };
+}
+
+function selectLines(raw: string, startLine: number, limit: number): { selectedLines: string[]; totalLines: number } {
+  const selectedLines: string[] = [];
+  let currentLine = 1;
+  let lineStartOffset = 0;
+
+  for (let index = 0; index <= raw.length; index += 1) {
+    const atEnd = index === raw.length;
+    if (!atEnd && raw[index] !== "\n") {
+      continue;
+    }
+
+    if (currentLine >= startLine && selectedLines.length < limit) {
+      selectedLines.push(raw.slice(lineStartOffset, index));
+    }
+
+    if (atEnd) {
+      break;
+    }
+
+    currentLine += 1;
+    lineStartOffset = index + 1;
+  }
+
+  return { selectedLines, totalLines: currentLine };
 }
 
 function formatWithLineNumbers(lines: string[], startLineNumber: number): string {

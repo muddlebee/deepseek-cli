@@ -41,7 +41,7 @@ export async function handleListFilesTool(
   return {
     ok: true,
     name: "ListFiles",
-    output: JSON.stringify(result, null, 2),
+    output: JSON.stringify(result),
     metadata: { total: result.total, truncated: result.truncated },
   };
 }

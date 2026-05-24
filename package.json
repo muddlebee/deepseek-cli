@@ -47,6 +47,7 @@
     "build": "npm run check && npm run bundle && node -e \"require('fs').chmodSync('dist/cli.js', 0o755)\"",
     "test": "node src/tests/run-tests.mjs",
     "test:single": "tsx --test",
+    "test:live": "tsx src/tests/live/run-live-benchmark.ts --scenario src/tests/live/scenarios/tool-call-perf.json",
     "prepack": "npm run build",
     "prepare": "husky"
   },

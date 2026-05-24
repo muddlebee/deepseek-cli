@@ -1,0 +1,24 @@
+{
+  "name": "tool-call-perf",
+  "runs": 1,
+  "scenarios": [
+    {
+      "id": "scheduler-scan",
+      "description": "Read-only inspection of scheduler and tool execution flow.",
+      "prompts": [
+        "Without modifying any files and without asking follow-up questions, inspect this repository and explain how tool calls are parsed, scheduled, and executed. Focus on executor and session flow."
+      ],
+      "maxIterationsPerPrompt": 16,
+      "timeoutMs": 180000
+    },
+    {
+      "id": "read-edit-consistency-scan",
+      "description": "Read-only inspection of read/edit/write stale-file protections.",
+      "prompts": [
+        "Without modifying files and without asking follow-up questions, find where stale-file protection is enforced for read/edit/write flows and summarize the exact guard conditions."
+      ],
+      "maxIterationsPerPrompt": 16,
+      "timeoutMs": 180000
+    }
+  ]
+}

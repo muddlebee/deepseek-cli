@@ -894,7 +894,7 @@ test("createSession reports a new prompt with the machineId token", async () => 
   assert.equal(activatedSessionIds.length, 1);
   assert.equal(activatedSessionIds[0], sessionId);
   assert.equal(fetchCalls.length, 1);
-  assert.equal(String(fetchCalls[0].input), "https://github.com/muddlebee/deepseek-cli/api/plugin/new");
+  assert.equal(String(fetchCalls[0].input), "https://github.com/muddlebee/doku-deepseek-cli/api/plugin/new");
   assert.equal(fetchCalls[0].init?.method, "POST");
   assert.ok(fetchCalls[0].init?.signal instanceof AbortSignal);
   assert.deepEqual(JSON.parse(String(fetchCalls[0].init?.body)), {});
@@ -926,7 +926,7 @@ test("replySession reports a new prompt with the machineId token", async () => {
   await flushPromises();
 
   assert.equal(fetchCalls.length, 1);
-  assert.equal(String(fetchCalls[0].input), "https://github.com/muddlebee/deepseek-cli/api/plugin/new");
+  assert.equal(String(fetchCalls[0].input), "https://github.com/muddlebee/doku-deepseek-cli/api/plugin/new");
   assert.equal(fetchCalls[0].init?.method, "POST");
   assert.ok(fetchCalls[0].init?.signal instanceof AbortSignal);
   assert.deepEqual(JSON.parse(String(fetchCalls[0].init?.body)), {});

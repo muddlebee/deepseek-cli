@@ -4,7 +4,7 @@ import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
 import {
   buildDiffPreview,
   ensureParentDirectory,
-  hasFileChangedSinceState,
+  hasFileChangedAgainstMetadata,
   normalizeContent,
   readTextFileWithMetadata,
   writeTextFile,
@@ -47,6 +47,7 @@ export async function handleWriteTool(
       }
 
       const existingFile = fs.existsSync(filePath);
+      let existingMetadata: ReturnType<typeof readTextFileWithMetadata> | null = null;
       if (existingFile) {
         let stat: fs.Stats;
         try {
@@ -78,7 +79,18 @@ export async function handleWriteTool(
             };
           }
 
-          if (hasFileChangedSinceState(filePath, fileState)) {
+          try {
+            existingMetadata = readTextFileWithMetadata(filePath);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return {
+              ok: false,
+              name: "write",
+              error: `Failed to read file: ${message}`,
+            };
+          }
+
+          if (hasFileChangedAgainstMetadata(existingMetadata, fileState)) {
             return {
               ok: false,
               name: "write",
@@ -93,7 +105,9 @@ export async function handleWriteTool(
       try {
         ensureParentDirectory(filePath);
 
-        const existingMetadata = existingFile ? readTextFileWithMetadata(filePath) : null;
+        if (!existingMetadata && existingFile) {
+          existingMetadata = readTextFileWithMetadata(filePath);
+        }
         const encoding = existingMetadata?.encoding ?? "utf8";
         const lineEndings = existingMetadata?.lineEndings ?? (input.content.includes("\r\n") ? "CRLF" : "LF");
         const diffPreview = buildDiffPreview(filePath, existingMetadata?.content ?? null, normalizedContent);
