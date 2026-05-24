@@ -91,7 +91,9 @@ Here's an example of how your output should be structured:
 
 </summary>`;
 
-const WORKFLOW_SKILLS_PROMPT = BUILTIN_WORKFLOW_SKILLS.map((skill) => `- /${skill.command}: ${skill.name}`).join("\n");
+const WORKFLOW_SKILLS_PROMPT = BUILTIN_WORKFLOW_SKILLS.map((skill) => `- /${skill.command}: ${skill.description}`).join(
+  "\n"
+);
 
 const SYSTEM_PROMPT_BASE = `You are doku, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
 
