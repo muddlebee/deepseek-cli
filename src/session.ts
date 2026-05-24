@@ -637,7 +637,12 @@ export class SessionManager {
     options?: { signal?: AbortSignal; sessionId?: string }
   ): Promise<string[]> {
     this.throwIfAborted(options?.signal);
-    let systemPrompt = `When users ask you to perform tasks, check if any of the available skills match. Skills provide specialized capabilities and domain knowledge.\n
+    const activeProvider = this.resolveActiveWebSearchProvider();
+    const builtinCapabilities = activeProvider
+      ? `\nBuilt-in tools already available: WebSearch (provider: ${activeProvider}). Do not match skills that duplicate this capability (e.g. web search, search the web, fetch search results).\n`
+      : "";
+
+    let systemPrompt = `When users ask you to perform tasks, check if any of the available skills match. Skills provide specialized capabilities and domain knowledge.\n${builtinCapabilities}
 Response in JSON format:
 \`\`\`
 {
