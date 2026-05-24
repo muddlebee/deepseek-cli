@@ -53,6 +53,15 @@ const SlashCommandMenu = React.memo(function SlashCommandMenu({
       ) : null}
       {visibleItems.map((item, idx) => {
         const actualIndex = visibleStart + idx;
+        if (item.kind === "section") {
+          return (
+            <Box key={item.label} marginTop={idx === 0 ? 0 : 1} paddingLeft={2}>
+              <Text bold color="#6b7280">
+                {item.label.toUpperCase()}
+              </Text>
+            </Box>
+          );
+        }
         return (
           <Box key={item.label} gap={2} flexDirection="row" flexGrow={1}>
             <Box width={labelColumnWidth} flexShrink={0} gap={2}>

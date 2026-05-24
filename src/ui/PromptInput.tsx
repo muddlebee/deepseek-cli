@@ -253,7 +253,13 @@ export const PromptInput = React.memo(function PromptInput({
       return;
     }
     if (menuIndex >= slashMenu.length) {
-      setMenuIndex(slashMenu.length - 1);
+      setMenuIndex(Math.max(0, slashMenu.length - 1));
+      return;
+    }
+    // Ensure the active index never lands on a section header
+    if (slashMenu[menuIndex]?.kind === "section") {
+      const first = slashMenu.findIndex((item) => item.kind !== "section");
+      if (first !== -1) setMenuIndex(first);
     }
   }, [slashMenu, showMenu, menuIndex]);
 
@@ -413,16 +419,16 @@ export const PromptInput = React.memo(function PromptInput({
 
       if (showMenu) {
         if (key.upArrow) {
-          setMenuIndex((idx) => (idx - 1 + slashMenu.length) % slashMenu.length);
+          setMenuIndex((idx) => nextSelectableIndex(idx, -1));
           return;
         }
         if (key.downArrow) {
-          setMenuIndex((idx) => (idx + 1) % slashMenu.length);
+          setMenuIndex((idx) => nextSelectableIndex(idx, 1));
           return;
         }
         if (key.tab || returnAction === "submit") {
           const selected = slashMenu[menuIndex];
-          if (selected) {
+          if (selected && selected.kind !== "section") {
             handleSlashSelection(selected);
             return;
           }
@@ -739,7 +745,19 @@ export const PromptInput = React.memo(function PromptInput({
     pasteCounterRef.current = 0;
   }
 
+  function nextSelectableIndex(from: number, direction: 1 | -1): number {
+    const len = slashMenu.length;
+    let idx = (from + direction + len) % len;
+    let guard = 0;
+    while (slashMenu[idx]?.kind === "section" && guard < len) {
+      idx = (idx + direction + len) % len;
+      guard++;
+    }
+    return idx;
+  }
+
   function handleSlashSelection(item: SlashCommandItem): void {
+    if (item.kind === "section") return;
     if (busy && item.kind !== "exit") {
       setStatusMessage("wait for the current response or press esc to interrupt");
       return;

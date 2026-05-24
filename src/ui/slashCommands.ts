@@ -1,6 +1,7 @@
 import type { SkillInfo } from "../session";
 
 export type SlashCommandKind =
+  | "section"
   | "skill"
   | "skills"
   | "model"
@@ -86,6 +87,20 @@ export const BUILTIN_SLASH_COMMANDS: SlashCommandItem[] = [
   },
 ];
 
+const SECTION_COMMANDS: SlashCommandItem = {
+  kind: "section",
+  name: "__section_commands__",
+  label: "Commands",
+  description: "",
+};
+
+const SECTION_SKILLS: SlashCommandItem = {
+  kind: "section",
+  name: "__section_skills__",
+  label: "Skills",
+  description: "",
+};
+
 export function buildSlashCommands(skills: SkillInfo[]): SlashCommandItem[] {
   const skillItems: SlashCommandItem[] = skills.map((skill) => ({
     kind: "skill",
@@ -94,7 +109,10 @@ export function buildSlashCommands(skills: SkillInfo[]): SlashCommandItem[] {
     description: skill.description || "(no description)",
     skill,
   }));
-  return [...skillItems, ...BUILTIN_SLASH_COMMANDS];
+  if (skillItems.length === 0) {
+    return [SECTION_COMMANDS, ...BUILTIN_SLASH_COMMANDS];
+  }
+  return [SECTION_COMMANDS, ...BUILTIN_SLASH_COMMANDS, SECTION_SKILLS, ...skillItems];
 }
 
 export function filterSlashCommands(items: SlashCommandItem[], token: string): SlashCommandItem[] {
@@ -103,9 +121,11 @@ export function filterSlashCommands(items: SlashCommandItem[], token: string): S
   }
   const query = token.slice(1).toLowerCase();
   if (!query) {
+    // Show the full grouped list (sections + all items)
     return items;
   }
-  return items.filter((item) => item.name.toLowerCase().includes(query));
+  // When searching, strip sections and filter across both commands and skills
+  return items.filter((item) => item.kind !== "section" && item.name.toLowerCase().includes(query));
 }
 
 export function findExactSlashCommand(items: SlashCommandItem[], token: string): SlashCommandItem | null {
@@ -113,7 +133,7 @@ export function findExactSlashCommand(items: SlashCommandItem[], token: string):
     return null;
   }
   const query = token.slice(1);
-  const matches = items.filter((item) => item.name === query);
+  const matches = items.filter((item) => item.kind !== "section" && item.name === query);
   return matches.find((item) => item.kind !== "skill") ?? matches[0] ?? null;
 }
 
