@@ -212,7 +212,7 @@ export function getCompactPrompt(sessionMessages: SessionMessage[]): string {
   return `${COMPACT_PROMPT_BASE}\n\nconversation below:\n\n\`\`\`jsonl\n${jsonl}\n\`\`\``;
 }
 
-export function getRuntimeContext(projectRoot: string, model?: string): string {
+export function getRuntimeContext(projectRoot: string, model?: string, webSearchProvider?: string): string {
   const uname = getUnameInfo();
   const shellPath = getShellPathInfo();
   const shellModeOpts = process.platform === "win32" ? { "shell mode": "git-bash" } : {};
@@ -230,13 +230,18 @@ export function getRuntimeContext(projectRoot: string, model?: string): string {
       jq: checkToolInstalled("jq"),
     },
   };
+
+  const webSearchSection = webSearchProvider
+    ? `\n\n# Web Search\n\nWeb search is configured with provider: **${webSearchProvider}**. Use the built-in \`WebSearch\` tool directly for all web searches. Do not load or use external search skills (e.g. firecrawl-search, serpapi-web-search) — the built-in tool is the correct path and is already wired to your configured provider.`
+    : "";
+
   return `${getCurrentDateAndModelPrompt(model)}
 
 # Local Workspace Environment
 
 \`\`\`json
 ${JSON.stringify(env, null, 2)}
-\`\`\``;
+\`\`\`${webSearchSection}`;
 }
 
 function checkToolInstalled(tool: string): boolean {

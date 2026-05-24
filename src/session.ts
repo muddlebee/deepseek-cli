@@ -37,7 +37,7 @@ import {
 } from "./common/builtin-skills";
 
 const MAX_SESSION_ENTRIES = 50;
-const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/deepseek-cli/api/plugin/new";
+const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/doku-deepseek-cli/api/plugin/new";
 const NEW_PROMPT_REPORT_TIMEOUT_MS = 3000;
 const DEFAULT_COMPACT_PROMPT_TOKEN_THRESHOLD = 128 * 1024;
 // Both deepseek-v4-flash and deepseek-v4-pro have a 1M token context window.
@@ -236,13 +236,20 @@ export type SkillInfo = {
 type SessionManagerOptions = {
   projectRoot: string;
   createOpenAIClient: CreateOpenAIClient;
-  getResolvedSettings: () => { model: string; webSearchTool?: string; mcpServers?: Record<string, McpServerConfig> };
+  getResolvedSettings: () => {
+    model: string;
+    webSearchTool?: string;
+    webSearchProvider?: string;
+    env?: Record<string, string>;
+    mcpServers?: Record<string, McpServerConfig>;
+  };
   renderMarkdown: (text: string) => string;
   onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
   onSessionEntryUpdated?: (entry: SessionEntry) => void;
   onLlmStreamProgress?: (progress: LlmStreamProgress) => void;
   onMcpStatusChanged?: () => void;
   onProcessStdout?: (pid: number, chunk: string) => void;
+  onNeedsWebSearchSetup?: () => void;
 };
 
 export type LlmStreamProgress = {
@@ -260,6 +267,8 @@ export class SessionManager {
   private readonly getResolvedSettings: () => {
     model: string;
     webSearchTool?: string;
+    webSearchProvider?: string;
+    env?: Record<string, string>;
     mcpServers?: Record<string, McpServerConfig>;
   };
   private readonly onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
@@ -267,6 +276,7 @@ export class SessionManager {
   private readonly onLlmStreamProgress?: (progress: LlmStreamProgress) => void;
   private readonly onMcpStatusChanged?: () => void;
   private readonly onProcessStdout?: (pid: number, chunk: string) => void;
+  private readonly onNeedsWebSearchSetup?: () => void;
   private activeSessionId: string | null = null;
   private activePromptController: AbortController | null = null;
   private readonly sessionControllers = new Map<string, AbortController>();
@@ -284,6 +294,7 @@ export class SessionManager {
     this.onLlmStreamProgress = options.onLlmStreamProgress;
     this.onMcpStatusChanged = options.onMcpStatusChanged;
     this.onProcessStdout = options.onProcessStdout;
+    this.onNeedsWebSearchSetup = options.onNeedsWebSearchSetup;
     this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient, this.mcpManager);
     this.mcpManager.prepare(this.getResolvedSettings().mcpServers);
   }
@@ -626,7 +637,12 @@ export class SessionManager {
     options?: { signal?: AbortSignal; sessionId?: string }
   ): Promise<string[]> {
     this.throwIfAborted(options?.signal);
-    let systemPrompt = `When users ask you to perform tasks, check if any of the available skills match. Skills provide specialized capabilities and domain knowledge.\n
+    const activeProvider = this.resolveActiveWebSearchProvider();
+    const builtinCapabilities = activeProvider
+      ? `\nBuilt-in tools already available: WebSearch (provider: ${activeProvider}). Do not match skills that duplicate this capability (e.g. web search, search the web, fetch search results).\n`
+      : "";
+
+    let systemPrompt = `When users ask you to perform tasks, check if any of the available skills match. Skills provide specialized capabilities and domain knowledge.\n${builtinCapabilities}
 Response in JSON format:
 \`\`\`
 {
@@ -974,7 +990,7 @@ The candidate skills are as follows:\n\n`;
 
     const runtimeContextMessage = this.buildSystemMessage(
       sessionId,
-      getRuntimeContext(this.projectRoot, promptToolOptions.model)
+      getRuntimeContext(this.projectRoot, promptToolOptions.model, this.resolveActiveWebSearchProvider())
     );
     this.appendSessionMessage(sessionId, runtimeContextMessage);
 
@@ -1377,6 +1393,15 @@ ${skillMd}
     };
     sessionMessages.splice(endIndex, 0, summaryMessage);
     this.saveSessionMessages(sessionId, sessionMessages);
+  }
+
+  private resolveActiveWebSearchProvider(): string | undefined {
+    const settings = this.getResolvedSettings();
+    const { webSearchProvider, webSearchTool } = settings;
+    if (webSearchTool) return "custom-script";
+    if (webSearchProvider === "tavily" && settings.env?.TAVILY_API_KEY?.trim()) return "tavily";
+    if (webSearchProvider === "firecrawl" && settings.env?.FIRECRAWL_API_KEY?.trim()) return "firecrawl";
+    return undefined;
   }
 
   private getPromptToolOptions(): { model: string; webSearchEnabled: boolean } {
@@ -1993,6 +2018,7 @@ ${skillMd}
       onProcessTimeoutControl: (pid, control) => this.setSessionProcessTimeoutControl(sessionId, pid, control),
       onBeforeFileMutation: (filePath) => this.prepareFileMutationCheckpoint(sessionId, filePath),
       onAfterFileMutation: (filePath) => this.recordFileMutationCheckpoint(sessionId, filePath),
+      onNeedsWebSearchSetup: () => this.onNeedsWebSearchSetup?.(),
       shouldStop: () => this.isInterrupted(sessionId),
     });
     if (this.isInterrupted(sessionId)) {
