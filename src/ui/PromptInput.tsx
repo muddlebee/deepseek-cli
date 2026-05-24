@@ -247,21 +247,16 @@ export const PromptInput = React.memo(function PromptInput({
     hadFileMentionTokenRef.current = hasFileMentionToken;
   }, [hasFileMentionToken, refreshFileMentionItems]);
 
+  // Reset to first selectable item whenever the menu content changes or appears.
+  // Intentionally omits menuIndex from deps so navigation (↑↓) doesn't re-trigger this.
   useEffect(() => {
     if (!showMenu) {
       setMenuIndex(0);
       return;
     }
-    if (menuIndex >= slashMenu.length) {
-      setMenuIndex(Math.max(0, slashMenu.length - 1));
-      return;
-    }
-    // Ensure the active index never lands on a section header
-    if (slashMenu[menuIndex]?.kind === "section") {
-      const first = slashMenu.findIndex((item) => item.kind !== "section");
-      if (first !== -1) setMenuIndex(first);
-    }
-  }, [slashMenu, showMenu, menuIndex]);
+    const first = slashMenu.findIndex((item) => item.kind !== "section");
+    setMenuIndex(first !== -1 ? first : 0);
+  }, [slashMenu, showMenu]);
 
   useEffect(() => {
     if (!fileMentionKey) {
