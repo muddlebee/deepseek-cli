@@ -150,12 +150,10 @@ async function executeFirecrawlSearch(
   const activityId = `web-search-${randomUUID()}`;
   context.onProcessStart?.(activityId, formatWebSearchActivityLabel(query));
   try {
-    const url = new URL("https://api.firecrawl.dev/v1/search");
-    url.searchParams.set("query", query);
-    url.searchParams.set("limit", "5");
-
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    const response = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ query, limit: 5 }),
     });
 
     if (!response.ok) {

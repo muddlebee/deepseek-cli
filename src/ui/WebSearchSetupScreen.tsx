@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useInput } from "ink";
 import { PasswordInput, Select } from "@inkjs/ui";
 import type { WebSearchProvider } from "../settings";
 
@@ -33,6 +33,12 @@ const PROVIDER_KEY_HINTS: Record<WebSearchProvider, string> = {
 export function WebSearchSetupScreen({ onComplete, onCancel }: WebSearchSetupScreenProps): React.ReactElement {
   const [step, setStep] = useState<Step>("provider");
   const [provider, setProvider] = useState<WebSearchProvider>("tavily");
+
+  useInput((_input, key) => {
+    if (key.escape) {
+      onCancel();
+    }
+  });
 
   function handleProviderSelect(value: string): void {
     setProvider(value as WebSearchProvider);
