@@ -403,9 +403,16 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
     provider: "tavily" | "firecrawl";
     apiKey: string;
   }): void {
-    const existing = readSettings() ?? {};
+    const projectSettingsPath = path.join(projectRoot, ".doku", "settings.json");
+    const hasProjectSettings = fs.existsSync(projectSettingsPath);
+    const existing = (hasProjectSettings ? readProjectSettings(projectRoot) : readSettings()) ?? {};
     const envKey = provider === "tavily" ? "TAVILY_API_KEY" : "FIRECRAWL_API_KEY";
-    writeSettings({ ...existing, webSearchProvider: provider, env: { ...existing.env, [envKey]: apiKey } });
+    const updated = { ...existing, webSearchProvider: provider, env: { ...existing.env, [envKey]: apiKey } };
+    if (hasProjectSettings) {
+      writeProjectSettings(updated, projectRoot);
+    } else {
+      writeSettings(updated);
+    }
     setView("chat");
   }
 
@@ -701,7 +708,15 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
           }}
         />
       ) : view === "web-search-setup" ? (
-        <WebSearchSetupScreen onComplete={handleWebSearchSetupComplete} onCancel={() => setView("chat")} />
+        <WebSearchSetupScreen
+          onComplete={handleWebSearchSetupComplete}
+          onCancel={() => setView("chat")}
+          settingsPath={
+            fs.existsSync(path.join(projectRoot, ".doku", "settings.json"))
+              ? path.join(projectRoot, ".doku", "settings.json")
+              : path.join(os.homedir(), ".doku", "settings.json")
+          }
+        />
       ) : shouldShowQuestionPrompt && pendingQuestion && !busy ? (
         <AskUserQuestionPrompt
           questions={pendingQuestion.questions}
