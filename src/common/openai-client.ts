@@ -28,6 +28,7 @@ export function createOpenAIClient(projectRoot: string = process.cwd()): {
   debugLogEnabled: boolean;
   notify?: string;
   webSearchTool?: string;
+  webSearchProvider?: string;
   env: Record<string, string>;
   machineId?: string;
 } {
@@ -42,6 +43,7 @@ export function createOpenAIClient(projectRoot: string = process.cwd()): {
       debugLogEnabled: settings.debugLogEnabled,
       notify: settings.notify,
       webSearchTool: settings.webSearchTool,
+      webSearchProvider: settings.webSearchProvider,
       env: settings.env,
       machineId: getMachineId(),
     };
@@ -58,6 +60,7 @@ export function createOpenAIClient(projectRoot: string = process.cwd()): {
       debugLogEnabled: settings.debugLogEnabled,
       notify: settings.notify,
       webSearchTool: settings.webSearchTool,
+      webSearchProvider: settings.webSearchProvider,
       env: settings.env,
       machineId: getMachineId(),
     };
@@ -93,6 +96,7 @@ export function createOpenAIClient(projectRoot: string = process.cwd()): {
     debugLogEnabled: settings.debugLogEnabled,
     notify: settings.notify,
     webSearchTool: settings.webSearchTool,
+    webSearchProvider: settings.webSearchProvider,
     env: settings.env,
     machineId: getMachineId(),
   };

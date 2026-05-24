@@ -13,7 +13,8 @@ export type SlashCommandKind =
   | "undo"
   | "mcp"
   | "raw"
-  | "exit";
+  | "exit"
+  | "setup-websearch";
 
 export type SlashCommandItem = {
   kind: SlashCommandKind;
@@ -85,6 +86,12 @@ export const BUILTIN_SLASH_COMMANDS: SlashCommandItem[] = [
     name: "exit",
     label: "/exit",
     description: "Quit doku — DeepSeek CLI",
+  },
+  {
+    kind: "setup-websearch",
+    name: "setup-websearch",
+    label: "/setup-websearch",
+    description: "Configure Tavily or Firecrawl as your web search provider",
   },
 ];
 

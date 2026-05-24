@@ -27,6 +27,7 @@ type LLMClientContext = {
   thinkingEnabled: boolean;
   notify?: string;
   webSearchTool?: string;
+  webSearchProvider?: string;
   env?: Record<string, string>;
   machineId?: string;
 };
@@ -50,12 +51,38 @@ export async function handleWebSearchTool(
     return executeConfiguredWebSearch(query, scriptPath, context, llmContext?.env ?? {});
   }
 
+  const provider = llmContext?.webSearchProvider?.trim();
+  const env = llmContext?.env ?? {};
+
+  if (provider === "tavily") {
+    const apiKey = env.TAVILY_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        ok: false,
+        name: "WebSearch",
+        error: "Tavily API key not set. Run /setup-websearch to configure.",
+      };
+    }
+    return executeTavilySearch(query, apiKey, context);
+  }
+
+  if (provider === "firecrawl") {
+    const apiKey = env.FIRECRAWL_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        ok: false,
+        name: "WebSearch",
+        error: "Firecrawl API key not set. Run /setup-websearch to configure.",
+      };
+    }
+    return executeFirecrawlSearch(query, apiKey, context);
+  }
+
   if (!hasUsableClient(llmContext)) {
     return {
       ok: false,
       name: "WebSearch",
-      error:
-        "WebSearch default mode requires a valid LLM configuration in ~/.doku/settings.json or ./.doku/settings.json.",
+      error: "WebSearch is not configured. Run /setup-websearch to choose Tavily or Firecrawl as your search provider.",
     };
   }
 
@@ -64,6 +91,92 @@ export async function handleWebSearchTool(
 
 function hasUsableClient(value: ReturnType<CreateOpenAIClient> | undefined): value is LLMClientContext {
   return Boolean(value?.client);
+}
+
+async function executeTavilySearch(
+  query: string,
+  apiKey: string,
+  context: ToolExecutionContext
+): Promise<ToolExecutionResult> {
+  const activityId = `web-search-${randomUUID()}`;
+  context.onProcessStart?.(activityId, formatWebSearchActivityLabel(query));
+  try {
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: apiKey, query, max_results: 5, include_answer: true }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Tavily API error ${response.status}${body ? `: ${body}` : ""}`);
+    }
+
+    const payload = (await response.json()) as {
+      answer?: string;
+      results?: Array<{ title?: string; url?: string; content?: string }>;
+    };
+
+    const parts: string[] = [];
+    if (typeof payload.answer === "string" && payload.answer.trim()) {
+      parts.push(`Answer: ${payload.answer.trim()}\n`);
+    }
+    for (const r of payload.results ?? []) {
+      if (r.title || r.url) {
+        parts.push(`[${r.title ?? ""}](${r.url ?? ""})\n${r.content ?? ""}\n`);
+      }
+    }
+
+    return { ok: true, name: "WebSearch", output: parts.join("\n").slice(0, MAX_OUTPUT_CHARS) || undefined };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, name: "WebSearch", error: `Tavily search failed: ${message}` };
+  } finally {
+    context.onProcessExit?.(activityId);
+  }
+}
+
+async function executeFirecrawlSearch(
+  query: string,
+  apiKey: string,
+  context: ToolExecutionContext
+): Promise<ToolExecutionResult> {
+  const activityId = `web-search-${randomUUID()}`;
+  context.onProcessStart?.(activityId, formatWebSearchActivityLabel(query));
+  try {
+    const url = new URL("https://api.firecrawl.dev/v1/search");
+    url.searchParams.set("query", query);
+    url.searchParams.set("limit", "5");
+
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Firecrawl API error ${response.status}${body ? `: ${body}` : ""}`);
+    }
+
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: Array<{ title?: string; url?: string; description?: string; markdown?: string }>;
+    };
+
+    const parts: string[] = [];
+    for (const r of payload.data ?? []) {
+      if (r.title || r.url) {
+        const body = r.markdown?.trim() || r.description?.trim() || "";
+        parts.push(`[${r.title ?? ""}](${r.url ?? ""})\n${body}\n`);
+      }
+    }
+
+    return { ok: true, name: "WebSearch", output: parts.join("\n").slice(0, MAX_OUTPUT_CHARS) || undefined };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, name: "WebSearch", error: `Firecrawl search failed: ${message}` };
+  } finally {
+    context.onProcessExit?.(activityId);
+  }
 }
 
 async function executeConfiguredWebSearch(

@@ -42,11 +42,12 @@ import {
 import { buildExitSummaryText } from "./exitSummary";
 import { RawMode, useRawModeContext } from "./contexts";
 import { renderMessageToStdout } from "./components/MessageView/utils";
+import { WebSearchSetupScreen } from "./WebSearchSetupScreen";
 
 const DEFAULT_MODEL = "deepseek-v4-pro";
 const DEFAULT_BASE_URL = "https://api.deepseek.com";
 
-type View = "chat" | "session-list" | "undo" | "mcp-status";
+type View = "chat" | "session-list" | "undo" | "mcp-status" | "web-search-setup";
 
 type AppProps = {
   projectRoot: string;
@@ -252,6 +253,11 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
         setView("mcp-status");
         return;
       }
+      if (submission.command === "setup-websearch") {
+        setShowWelcome(false);
+        setView("web-search-setup");
+        return;
+      }
 
       const prompt: UserPromptContent = {
         text: submission.text,
@@ -386,6 +392,19 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
       selectedSkills: undefined,
     });
   }, [handleSubmit, initialPrompt]);
+
+  function handleWebSearchSetupComplete({
+    provider,
+    apiKey,
+  }: {
+    provider: "tavily" | "firecrawl";
+    apiKey: string;
+  }): void {
+    const existing = readSettings() ?? {};
+    const envKey = provider === "tavily" ? "TAVILY_API_KEY" : "FIRECRAWL_API_KEY";
+    writeSettings({ ...existing, webSearchProvider: provider, env: { ...existing.env, [envKey]: apiKey } });
+    setView("chat");
+  }
 
   const handleSelectSession = useCallback(
     async (sessionId: string) => {
@@ -678,6 +697,8 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
             void sessionManager.reconnectMcpServer(name, latest.mcpServers?.[name]);
           }}
         />
+      ) : view === "web-search-setup" ? (
+        <WebSearchSetupScreen onComplete={handleWebSearchSetupComplete} onCancel={() => setView("chat")} />
       ) : shouldShowQuestionPrompt && pendingQuestion && !busy ? (
         <AskUserQuestionPrompt
           questions={pendingQuestion.questions}

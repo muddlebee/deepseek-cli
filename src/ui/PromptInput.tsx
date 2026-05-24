@@ -69,7 +69,7 @@ export type PromptSubmission = {
   text: string;
   imageUrls: string[];
   selectedSkills?: SkillInfo[];
-  command?: "new" | "resume" | "continue" | "undo" | "mcp" | "exit";
+  command?: "new" | "resume" | "continue" | "undo" | "mcp" | "exit" | "setup-websearch";
 };
 
 export type PromptDraft = {
@@ -819,6 +819,11 @@ export const PromptInput = React.memo(function PromptInput({
       onSubmit({ text: "/exit", imageUrls: [], command: "exit" });
       setBuffer(EMPTY_BUFFER);
       clearUndoRedoStacks();
+      return;
+    }
+    if (item.kind === "setup-websearch") {
+      onSubmit({ text: "", imageUrls: [], command: "setup-websearch" });
+      resetPromptInput();
       return;
     }
   }
