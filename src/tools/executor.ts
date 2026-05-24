@@ -20,6 +20,7 @@ export type CreateOpenAIClient = () => {
   debugLogEnabled?: boolean;
   notify?: string;
   webSearchTool?: string;
+  webSearchProvider?: string;
   env?: Record<string, string>;
   machineId?: string;
 };
@@ -44,6 +45,7 @@ export type ToolExecutionContext = {
   onProcessTimeoutControl?: (processId: string | number, control: ProcessTimeoutControl | null) => void;
   onBeforeFileMutation?: (filePath: string) => void;
   onAfterFileMutation?: (filePath: string) => void;
+  onNeedsWebSearchSetup?: () => void;
   bashTimeoutMs?: number;
   bashMinTimeoutMs?: number;
 };
@@ -55,6 +57,7 @@ export type ToolExecutionHooks = {
   onProcessTimeoutControl?: (processId: string | number, control: ProcessTimeoutControl | null) => void;
   onBeforeFileMutation?: (filePath: string) => void;
   onAfterFileMutation?: (filePath: string) => void;
+  onNeedsWebSearchSetup?: () => void;
   shouldStop?: () => boolean;
 };
 
@@ -241,6 +244,7 @@ export class ToolExecutor {
         onProcessTimeoutControl: hooks?.onProcessTimeoutControl,
         onBeforeFileMutation: hooks?.onBeforeFileMutation,
         onAfterFileMutation: hooks?.onAfterFileMutation,
+        onNeedsWebSearchSetup: hooks?.onNeedsWebSearchSetup,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

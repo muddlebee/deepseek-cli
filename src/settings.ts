@@ -1,5 +1,7 @@
 import { defaultsToThinkingMode } from "./common/model-capabilities";
 
+export type WebSearchProvider = "tavily" | "firecrawl";
+
 export type DeepcodingEnv = Record<string, string | undefined> & {
   MODEL?: string;
   BASE_URL?: string;
@@ -7,6 +9,8 @@ export type DeepcodingEnv = Record<string, string | undefined> & {
   THINKING_ENABLED?: string;
   REASONING_EFFORT?: string;
   DEBUG_LOG_ENABLED?: string;
+  TAVILY_API_KEY?: string;
+  FIRECRAWL_API_KEY?: string;
 };
 
 export type ReasoningEffort = "high" | "max";
@@ -25,6 +29,7 @@ export type DeepcodingSettings = {
   debugLogEnabled?: boolean;
   notify?: string;
   webSearchTool?: string;
+  webSearchProvider?: WebSearchProvider;
   mcpServers?: Record<string, McpServerConfig>;
 };
 
@@ -38,6 +43,7 @@ export type ResolvedDeepcodingSettings = {
   debugLogEnabled: boolean;
   notify?: string;
   webSearchTool?: string;
+  webSearchProvider?: WebSearchProvider;
   mcpServers?: Record<string, McpServerConfig>;
 };
 
@@ -222,6 +228,14 @@ export function resolveSettingsSources(
     trimString(userSettings?.webSearchTool) ||
     "";
 
+  const rawProvider =
+    trimString(systemEnv.WEB_SEARCH_PROVIDER) ||
+    trimString(projectSettings?.webSearchProvider) ||
+    trimString(userSettings?.webSearchProvider) ||
+    "";
+  const webSearchProvider: WebSearchProvider | undefined =
+    rawProvider === "tavily" || rawProvider === "firecrawl" ? rawProvider : undefined;
+
   return {
     env,
     apiKey: trimString(env.API_KEY) || undefined,
@@ -232,6 +246,7 @@ export function resolveSettingsSources(
     debugLogEnabled,
     notify: notify || undefined,
     webSearchTool: webSearchTool || undefined,
+    webSearchProvider,
     mcpServers: mergeMcpServers(userSettings, projectSettings, userEnv, projectEnv, systemEnv),
   };
 }
