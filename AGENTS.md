@@ -3,7 +3,7 @@
 ## Project Identity
 
 - **Brand name**: `doku` — the terminal AI coding assistant
-- **npm package**: `deepseek-cli` (for SEO discoverability; `npm install -g deepseek-cli`)
+- **npm package**: `doku-deepseek-cli` (for SEO discoverability; `npm install -g doku-deepseek-cli`)
 - **Binary**: `doku` (what users type daily)
 - **Config directory**: `~/.doku/settings.json` (user-level), `./.doku/settings.json` (project-level)
 - **Environment variables**: `DOKU_*` prefix (e.g. `DOKU_API_KEY`, `DOKU_MODEL`)

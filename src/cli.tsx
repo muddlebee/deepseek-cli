@@ -7,7 +7,7 @@ import pkg from "../package.json";
 
 const args = process.argv.slice(2);
 const packageInfo: PackageInfo = {
-  name: typeof pkg.name === "string" ? pkg.name : "deepseek-cli",
+  name: typeof pkg.name === "string" ? pkg.name : "doku-deepseek-cli",
   version: typeof pkg.version === "string" ? pkg.version : "",
 };
 

@@ -17,7 +17,7 @@ English · [中文](README-zh_CN.md)
 **doku** is a terminal AI coding assistant built for [DeepSeek](https://deepseek.com) models. It supports deep thinking, reasoning effort control, Agent Skills, and MCP integration — all from your terminal.
 
 ```bash
-npm install -g deepseek-cli
+npm install -g doku-deepseek-cli
 doku
 ```
 
@@ -33,7 +33,7 @@ doku
 ## Install
 
 ```bash
-npm install -g deepseek-cli
+npm install -g doku-deepseek-cli
 ```
 
 Then run in any project directory:

@@ -17,7 +17,7 @@
 **doku** 是专为 [DeepSeek](https://deepseek.com) 模型打造的终端 AI 编程助手。支持深度思考、推理强度控制、Agent Skills 以及 MCP 集成——一切尽在终端。
 
 ```bash
-npm install -g deepseek-cli
+npm install -g doku-deepseek-cli
 doku
 ```
 
@@ -33,7 +33,7 @@ doku
 ## 安装
 
 ```bash
-npm install -g deepseek-cli
+npm install -g doku-deepseek-cli
 ```
 
 在任意项目目录下运行：
