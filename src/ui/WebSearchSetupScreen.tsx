@@ -13,7 +13,6 @@ type WebSearchSetupResult = {
 type WebSearchSetupScreenProps = {
   onComplete: (result: WebSearchSetupResult) => void;
   onCancel: () => void;
-  settingsPath: string;
 };
 
 const PROVIDER_OPTIONS = [
@@ -31,7 +30,7 @@ const PROVIDER_KEY_HINTS: Record<WebSearchProvider, string> = {
   firecrawl: "fc-...",
 };
 
-export function WebSearchSetupScreen({ onComplete, onCancel, settingsPath }: WebSearchSetupScreenProps): React.ReactElement {
+export function WebSearchSetupScreen({ onComplete, onCancel }: WebSearchSetupScreenProps): React.ReactElement {
   const [step, setStep] = useState<Step>("provider");
   const [provider, setProvider] = useState<WebSearchProvider>("tavily");
 
@@ -55,7 +54,7 @@ export function WebSearchSetupScreen({ onComplete, onCancel, settingsPath }: Web
   return (
     <Box flexDirection="column" paddingX={2} marginTop={1} gap={1}>
       <Text bold>Web Search Setup</Text>
-      <Text dimColor>Settings will be saved to {settingsPath}</Text>
+      <Text dimColor>Settings will be saved to ~/.doku/settings.json</Text>
       <Text dimColor>Press Escape to cancel</Text>
 
       {step === "provider" && (
