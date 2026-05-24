@@ -37,6 +37,7 @@ import {
   undoPromptEdit,
 } from "./promptUndoRedo";
 import { buildSlashCommands, filterSlashCommands, findExactSlashCommand } from "./slashCommands";
+import { getBuiltinWorkflowSkillByName } from "../common/builtin-skills";
 import type { SlashCommandItem } from "./slashCommands";
 import {
   filterFileMentionItems,
@@ -893,11 +894,15 @@ export const PromptInput = React.memo(function PromptInput({
       {/* Input */}
       <Box borderStyle="round" borderColor={busy ? "#6366f1" : "#0ea5e9"} paddingX={1}>
         <PromptPrefixLine busy={busy} />
-        {selectedSkills.map((skill) => (
-          <Text key={skill.name} color="#a855f7">
-            [{skill.name}]{" "}
-          </Text>
-        ))}
+        {selectedSkills.map((skill) => {
+          const builtin = getBuiltinWorkflowSkillByName(skill.name);
+          const label = builtin ? builtin.command : skill.name;
+          return (
+            <Text key={skill.name} color="#a855f7">
+              [{label}]{" "}
+            </Text>
+          );
+        })}
         <Text>{renderBufferWithCursor(buffer, !disabled && hasTerminalFocus, placeholder, pastesRef.current)}</Text>
         {inlineHint ? <Text dimColor>{inlineHint}</Text> : null}
       </Box>
