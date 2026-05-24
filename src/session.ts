@@ -37,7 +37,7 @@ import {
 } from "./common/builtin-skills";
 
 const MAX_SESSION_ENTRIES = 50;
-const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/deepseek-cli/api/plugin/new";
+const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/doku-deepseek-cli/api/plugin/new";
 const NEW_PROMPT_REPORT_TIMEOUT_MS = 3000;
 const DEFAULT_COMPACT_PROMPT_TOKEN_THRESHOLD = 128 * 1024;
 // Both deepseek-v4-flash and deepseek-v4-pro have a 1M token context window.
@@ -236,7 +236,12 @@ export type SkillInfo = {
 type SessionManagerOptions = {
   projectRoot: string;
   createOpenAIClient: CreateOpenAIClient;
-  getResolvedSettings: () => { model: string; webSearchTool?: string; mcpServers?: Record<string, McpServerConfig> };
+  getResolvedSettings: () => {
+    model: string;
+    webSearchTool?: string;
+    webSearchProvider?: string;
+    mcpServers?: Record<string, McpServerConfig>;
+  };
   renderMarkdown: (text: string) => string;
   onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
   onSessionEntryUpdated?: (entry: SessionEntry) => void;
@@ -261,6 +266,7 @@ export class SessionManager {
   private readonly getResolvedSettings: () => {
     model: string;
     webSearchTool?: string;
+    webSearchProvider?: string;
     mcpServers?: Record<string, McpServerConfig>;
   };
   private readonly onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
@@ -977,7 +983,7 @@ The candidate skills are as follows:\n\n`;
 
     const runtimeContextMessage = this.buildSystemMessage(
       sessionId,
-      getRuntimeContext(this.projectRoot, promptToolOptions.model)
+      getRuntimeContext(this.projectRoot, promptToolOptions.model, this.getResolvedSettings().webSearchProvider)
     );
     this.appendSessionMessage(sessionId, runtimeContextMessage);
 
