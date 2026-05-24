@@ -3,9 +3,13 @@ import { render } from "ink";
 import { setShellIfWindows } from "./common/shell-utils";
 import { checkForNpmUpdate, promptForPendingUpdate, type PackageInfo } from "./updateCheck";
 import { AppContainer } from "./ui";
+import pkg from "../package.json";
 
 const args = process.argv.slice(2);
-const packageInfo = readPackageInfo();
+const packageInfo: PackageInfo = {
+  name: typeof pkg.name === "string" ? pkg.name : "deepseek-cli",
+  version: typeof pkg.version === "string" ? pkg.version : "",
+};
 
 if (args.includes("--version") || args.includes("-v")) {
   process.stdout.write(`${packageInfo.version || "unknown"}\n`);
@@ -125,17 +129,5 @@ function configureWindowsShell(): void {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`doku: ${message}\n`);
     process.exit(1);
-  }
-}
-
-function readPackageInfo(): PackageInfo {
-  try {
-    const pkg = require("../package.json") as { name?: unknown; version?: unknown };
-    return {
-      name: typeof pkg.name === "string" ? pkg.name : "deepseek-cli",
-      version: typeof pkg.version === "string" ? pkg.version : "",
-    };
-  } catch {
-    return { name: "deepseek-cli", version: "" };
   }
 }
