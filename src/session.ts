@@ -987,7 +987,7 @@ The candidate skills are as follows:\n\n`;
     const userMessage = this.buildUserMessage(sessionId, userPrompt);
     this.appendSessionMessage(sessionId, userMessage);
 
-    if (userPrompt.text) {
+    if (userPrompt.text && !this.hasExplicitSkills(userPrompt)) {
       const skills = await this.listSkills();
       const skillNames = await this.identifyMatchingSkillNames(skills, userPrompt.text, { signal });
       this.throwIfAborted(signal);
@@ -1051,7 +1051,7 @@ ${skillMd}
     const userMessage = this.buildUserMessage(sessionId, userPrompt);
     this.appendSessionMessage(sessionId, userMessage);
 
-    if (userPrompt.text) {
+    if (userPrompt.text && !this.hasExplicitSkills(userPrompt)) {
       const skills = await this.listSkills(sessionId);
       const skillNames = await this.identifyMatchingSkillNames(skills, userPrompt.text, { signal, sessionId });
       this.throwIfAborted(signal);
@@ -1092,6 +1092,10 @@ ${skillMd}
       (!userPrompt.imageUrls || userPrompt.imageUrls.length === 0) &&
       (!userPrompt.skills || userPrompt.skills.length === 0)
     );
+  }
+
+  private hasExplicitSkills(userPrompt: UserPromptContent): boolean {
+    return Array.isArray(userPrompt.skills) && userPrompt.skills.length > 0;
   }
 
   async activateSession(sessionId: string, controller?: AbortController): Promise<void> {

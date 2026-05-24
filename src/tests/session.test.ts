@@ -761,6 +761,60 @@ test("createSession loads bundled workflow skill documents from builtin paths", 
   assert.match(loadedSkillMessage?.content ?? "", /# Debugging and Error Recovery/);
 });
 
+test("createSession does not auto-match extra skills when a skill is explicitly selected", async () => {
+  const workspace = createTempDir("doku-explicit-skill-create-workspace-");
+  const home = createTempDir("doku-explicit-skill-create-home-");
+  setHomeDir(home);
+
+  const manager = createSessionManager(workspace, "machine-id-explicit-skill-create");
+  let autoMatched = false;
+  (manager as any).identifyMatchingSkillNames = async () => {
+    autoMatched = true;
+    return ["spec-driven-development"];
+  };
+  (manager as any).activateSession = async () => {};
+
+  const sessionId = await manager.createSession({
+    text: "a super CLI",
+    skills: [{ name: "idea-refine", path: "builtin:idea-refine", description: "Refine ideas" }],
+  });
+  const loadedSkillNames = manager
+    .listSessionMessages(sessionId)
+    .filter((message) => message.role === "system" && message.meta?.skill)
+    .map((message) => message.meta?.skill?.name);
+
+  assert.equal(autoMatched, false);
+  assert.deepEqual(loadedSkillNames, ["idea-refine"]);
+});
+
+test("replySession does not auto-match extra skills when a skill is explicitly selected", async () => {
+  const workspace = createTempDir("doku-explicit-skill-reply-workspace-");
+  const home = createTempDir("doku-explicit-skill-reply-home-");
+  setHomeDir(home);
+
+  const manager = createSessionManager(workspace, "machine-id-explicit-skill-reply");
+  (manager as any).activateSession = async () => {};
+
+  const sessionId = await manager.createSession({ text: "" });
+  let autoMatched = false;
+  (manager as any).identifyMatchingSkillNames = async () => {
+    autoMatched = true;
+    return ["spec-driven-development"];
+  };
+
+  await manager.replySession(sessionId, {
+    text: "a super CLI",
+    skills: [{ name: "idea-refine", path: "builtin:idea-refine", description: "Refine ideas" }],
+  });
+  const loadedSkillNames = manager
+    .listSessionMessages(sessionId)
+    .filter((message) => message.role === "system" && message.meta?.skill)
+    .map((message) => message.meta?.skill?.name);
+
+  assert.equal(autoMatched, false);
+  assert.deepEqual(loadedSkillNames, ["idea-refine"]);
+});
+
 test("replySession stores /init and sends the active root project AGENTS path to the LLM", async () => {
   const workspace = createTempDir("deepcode-init-root-workspace-");
   const home = createTempDir("deepcode-init-root-home-");
