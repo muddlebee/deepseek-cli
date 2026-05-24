@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 const MAX_MATCHES = 200;
 const MAX_MATCH_COUNT = MAX_MATCHES + 1;
 const SEARCH_TIMEOUT_MS = 15_000;
+const REGEX_META_CHARS = new Set(["\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]);
 
 type GrepMatch = {
   file: string;
@@ -97,9 +98,8 @@ export async function handleGrepTool(
 }
 
 function isLiteralPattern(pattern: string): boolean {
-  const regexMeta = new Set(["\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]);
   for (const char of pattern) {
-    if (regexMeta.has(char)) {
+    if (REGEX_META_CHARS.has(char)) {
       return false;
     }
   }
