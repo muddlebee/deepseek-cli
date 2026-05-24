@@ -49,7 +49,7 @@ export async function handleGrepTool(
   const caseSensitive = args.case_sensitive === true;
   const contextLines = typeof args.context_lines === "number" ? Math.min(Math.max(0, args.context_lines), 10) : 0;
 
-  const rgArgs: string[] = ["--json", "--max-filesize", "1M"];
+  const rgArgs: string[] = ["--json", "--max-filesize", "1M", "--max-count", String(MAX_MATCHES)];
 
   if (!caseSensitive) rgArgs.push("--ignore-case");
   if (contextLines > 0) rgArgs.push("--context", String(contextLines));

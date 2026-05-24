@@ -274,6 +274,7 @@ export class SessionManager {
   private readonly toolExecutor: ToolExecutor;
   private readonly mcpManager = new McpManager();
   private mcpToolDefinitions: ToolDefinition[] = [];
+  private skillsCache: { skills: SkillInfo[]; dirMtimes: Map<string, number> } | null = null;
 
   constructor(options: SessionManagerOptions) {
     this.projectRoot = options.projectRoot;
@@ -651,6 +652,7 @@ The candidate skills are as follows:\n\n`;
     }
 
     try {
+      const skillMatcherStart = debugLogEnabled ? performance.now() : 0;
       const response = await this.createChatCompletionStream(
         client,
         {
@@ -670,6 +672,9 @@ The candidate skills are as follows:\n\n`;
           params: { purpose: "skill-matching" },
         }
       );
+      if (debugLogEnabled) {
+        process.stderr.write(`[perf] skillMatcher: ${(performance.now() - skillMatcherStart).toFixed(1)}ms\n`);
+      }
       this.throwIfAborted(options?.signal);
 
       const rawContent = response.choices?.[0]?.message?.content;
@@ -692,11 +697,53 @@ The candidate skills are as follows:\n\n`;
     }
   }
 
+  private getSkillDirMtimes(dirs: string[]): Map<string, number> {
+    const mtimes = new Map<string, number>();
+    for (const dir of dirs) {
+      try {
+        mtimes.set(dir, fs.statSync(dir).mtimeMs);
+      } catch {
+        mtimes.set(dir, 0);
+      }
+    }
+    return mtimes;
+  }
+
+  private isCacheStale(cached: Map<string, number>, current: Map<string, number>): boolean {
+    for (const [dir, mtime] of current) {
+      if (cached.get(dir) !== mtime) return true;
+    }
+    return false;
+  }
+
   async listSkills(sessionId?: string): Promise<SkillInfo[]> {
+    const { debugLogEnabled } = this.createOpenAIClient();
+    const listSkillsStart = debugLogEnabled ? performance.now() : 0;
+
     const homeDir = os.homedir();
     const agentsRoot = path.join(homeDir, ".agents", "skills");
     const legacyProjectSkillsRoot = path.join(this.projectRoot, ".doku", "skills");
     const projectAgentsSkillsRoot = path.join(this.projectRoot, ".agents", "skills");
+
+    const skillDirs = [agentsRoot, legacyProjectSkillsRoot, projectAgentsSkillsRoot];
+    const currentMtimes = this.getSkillDirMtimes(skillDirs);
+
+    if (this.skillsCache && !this.isCacheStale(this.skillsCache.dirMtimes, currentMtimes)) {
+      const cached = this.skillsCache.skills.map((s) => ({ ...s, isLoaded: false }));
+      if (sessionId) {
+        const loadedSkillKeys = this.getLoadedSkillKeys(sessionId);
+        for (const skill of cached) {
+          if (loadedSkillKeys.has(this.getSkillKey(skill)) || loadedSkillKeys.has(this.getSkillKeyByName(skill.name))) {
+            skill.isLoaded = true;
+          }
+        }
+      }
+      if (debugLogEnabled) {
+        process.stderr.write(`[perf] listSkills: ${(performance.now() - listSkillsStart).toFixed(1)}ms (cache)\n`);
+      }
+      return cached;
+    }
+
     const skillsByName = new Map<string, SkillInfo>();
 
     for (const skill of BUILTIN_WORKFLOW_SKILLS) {
@@ -761,7 +808,12 @@ The candidate skills are as follows:\n\n`;
       }
     }
 
-    return Array.from(skillsByName.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const skills = Array.from(skillsByName.values()).sort((a, b) => a.name.localeCompare(b.name));
+    this.skillsCache = { skills: skills.map((s) => ({ ...s, isLoaded: false })), dirMtimes: currentMtimes };
+    if (debugLogEnabled) {
+      process.stderr.write(`[perf] listSkills: ${(performance.now() - listSkillsStart).toFixed(1)}ms (disk)\n`);
+    }
+    return skills;
   }
 
   private resolveSkillPath(skillPath: string): string {
