@@ -243,6 +243,7 @@ type SessionManagerOptions = {
   onLlmStreamProgress?: (progress: LlmStreamProgress) => void;
   onMcpStatusChanged?: () => void;
   onProcessStdout?: (pid: number, chunk: string) => void;
+  onNeedsWebSearchSetup?: () => void;
 };
 
 export type LlmStreamProgress = {
@@ -267,6 +268,7 @@ export class SessionManager {
   private readonly onLlmStreamProgress?: (progress: LlmStreamProgress) => void;
   private readonly onMcpStatusChanged?: () => void;
   private readonly onProcessStdout?: (pid: number, chunk: string) => void;
+  private readonly onNeedsWebSearchSetup?: () => void;
   private activeSessionId: string | null = null;
   private activePromptController: AbortController | null = null;
   private readonly sessionControllers = new Map<string, AbortController>();
@@ -284,6 +286,7 @@ export class SessionManager {
     this.onLlmStreamProgress = options.onLlmStreamProgress;
     this.onMcpStatusChanged = options.onMcpStatusChanged;
     this.onProcessStdout = options.onProcessStdout;
+    this.onNeedsWebSearchSetup = options.onNeedsWebSearchSetup;
     this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient, this.mcpManager);
     this.mcpManager.prepare(this.getResolvedSettings().mcpServers);
   }
@@ -1993,6 +1996,7 @@ ${skillMd}
       onProcessTimeoutControl: (pid, control) => this.setSessionProcessTimeoutControl(sessionId, pid, control),
       onBeforeFileMutation: (filePath) => this.prepareFileMutationCheckpoint(sessionId, filePath),
       onAfterFileMutation: (filePath) => this.recordFileMutationCheckpoint(sessionId, filePath),
+      onNeedsWebSearchSetup: () => this.onNeedsWebSearchSetup?.(),
       shouldStop: () => this.isInterrupted(sessionId),
     });
     if (this.isInterrupted(sessionId)) {

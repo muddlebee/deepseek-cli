@@ -57,10 +57,12 @@ export async function handleWebSearchTool(
   if (provider === "tavily") {
     const apiKey = env.TAVILY_API_KEY?.trim();
     if (!apiKey) {
+      context.onNeedsWebSearchSetup?.();
       return {
         ok: false,
         name: "WebSearch",
-        error: "Tavily API key not set. Run /setup-websearch to configure.",
+        error: "Tavily API key is not set. Please complete the web search setup that just opened.",
+        awaitUserResponse: true,
       };
     }
     return executeTavilySearch(query, apiKey, context);
@@ -69,20 +71,24 @@ export async function handleWebSearchTool(
   if (provider === "firecrawl") {
     const apiKey = env.FIRECRAWL_API_KEY?.trim();
     if (!apiKey) {
+      context.onNeedsWebSearchSetup?.();
       return {
         ok: false,
         name: "WebSearch",
-        error: "Firecrawl API key not set. Run /setup-websearch to configure.",
+        error: "Firecrawl API key is not set. Please complete the web search setup that just opened.",
+        awaitUserResponse: true,
       };
     }
     return executeFirecrawlSearch(query, apiKey, context);
   }
 
   if (!hasUsableClient(llmContext)) {
+    context.onNeedsWebSearchSetup?.();
     return {
       ok: false,
       name: "WebSearch",
-      error: "WebSearch is not configured. Run /setup-websearch to choose Tavily or Firecrawl as your search provider.",
+      error: "WebSearch is not configured. Please complete the web search setup that just opened.",
+      awaitUserResponse: true,
     };
   }
 

@@ -132,6 +132,9 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
         const available = MAX_STDOUT_BUFFER - current.length;
         buf.set(pid, current + text.slice(0, available));
       },
+      onNeedsWebSearchSetup: () => {
+        setView("web-search-setup");
+      },
     });
   }, [projectRoot]);
 
