@@ -451,6 +451,10 @@ export const PromptInput = React.memo(function PromptInput({
       }
 
       if (key.backspace) {
+        if (buffer.text === "" && selectedSkills.length > 0) {
+          setSelectedSkills((prev) => prev.slice(0, -1));
+          return;
+        }
         updateBuffer((s) => deletePasteMarkerBackward(s, pastesRef.current) ?? backspace(s));
         return;
       }
@@ -886,17 +890,14 @@ export const PromptInput = React.memo(function PromptInput({
           <Text dimColor>{` (${IMAGE_ATTACHMENT_CLEAR_HINT})`}</Text>
         </Box>
       ) : null}
-      {selectedSkills.length > 0 ? (
-        <Box>
-          <Text color="magenta" wrap="truncate-end">
-            {formatSelectedSkillsStatus(selectedSkills)}
-          </Text>
-          <Text dimColor> (use /skills to edit)</Text>
-        </Box>
-      ) : null}
       {/* Input */}
       <Box borderStyle="round" borderColor={busy ? "#6366f1" : "#0ea5e9"} paddingX={1}>
         <PromptPrefixLine busy={busy} />
+        {selectedSkills.map((skill) => (
+          <Text key={skill.name} color="#a855f7">
+            [{skill.name}]{" "}
+          </Text>
+        ))}
         <Text>{renderBufferWithCursor(buffer, !disabled && hasTerminalFocus, placeholder, pastesRef.current)}</Text>
         {inlineHint ? <Text dimColor>{inlineHint}</Text> : null}
       </Box>
