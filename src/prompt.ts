@@ -95,7 +95,7 @@ const WORKFLOW_SKILLS_PROMPT = BUILTIN_WORKFLOW_SKILLS.map((skill) => `- /${skil
   "\n"
 );
 
-const SYSTEM_PROMPT_BASE = `You are doku, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
+const SYSTEM_PROMPT_BASE = `You are doku, an interactive CLI assistant for software engineering. You help users think, plan, build, debug, and review code — using tools to read files, run shell commands, search codebases, and make edits. Be direct and concise. Prefer action over explanation.
 
 # Operating Principles
 
