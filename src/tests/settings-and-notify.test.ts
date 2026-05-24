@@ -100,7 +100,7 @@ test("resolveSettings ignores removed legacy env.THINKING", () => {
   assert.equal(resolved.thinkingEnabled, false);
 });
 
-test("resolveSettingsSources applies user, project, and DEEPCODE environment precedence", () => {
+test("resolveSettingsSources applies user, project, and DOKU environment precedence", () => {
   const resolved = resolveSettingsSources(
     {
       env: {
@@ -131,11 +131,11 @@ test("resolveSettingsSources applies user, project, and DEEPCODE environment pre
       baseURL: "https://default.example.com",
     },
     {
-      DEEPCODE_MODEL: "system-model",
-      DEEPCODE_THINKING_ENABLED: "false",
-      DEEPCODE_REASONING_EFFORT: "high",
-      DEEPCODE_DEBUG_LOG_ENABLED: "true",
-      DEEPCODE_WEBHOOK: "system-webhook",
+      DOKU_MODEL: "system-model",
+      DOKU_THINKING_ENABLED: "false",
+      DOKU_REASONING_EFFORT: "high",
+      DOKU_DEBUG_LOG_ENABLED: "true",
+      DOKU_WEBHOOK: "system-webhook",
     }
   );
 
@@ -183,7 +183,7 @@ test("resolveSettingsSources merges MCP env with documented priority", () => {
       baseURL: "https://default.example.com",
     },
     {
-      DEEPCODE_MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "system-global",
+      DOKU_MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "system-global",
     }
   );
 

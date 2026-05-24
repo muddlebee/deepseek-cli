@@ -6,6 +6,8 @@
 
 [![][npm-release-shield]][npm-release-link] [![][npm-downloads-shield]][npm-downloads-link] [![][github-stars-shield]][github-stars-link] [![][github-issues-shield]][github-issues-link] [![][github-license-shield]][github-license-link]
 
+English · [中文](README-zh_CN.md)
+
 *Poison to bad code.*
 
 </div>

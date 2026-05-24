@@ -7,7 +7,7 @@ import { getDebugLogPath, logOpenAIChatCompletionDebug } from "../common/debug-l
 
 test("debug logger appends full entries without rotation", () => {
   const originalHome = process.env.HOME;
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), "deepcode-debug-log-home-"));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "doku-debug-log-home-"));
   process.env.HOME = home;
   try {
     for (let index = 0; index < 25; index += 1) {

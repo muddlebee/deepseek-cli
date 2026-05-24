@@ -1,36 +1,50 @@
 <div align="center">
-<br/>
-<br/>
-<p align="center">
-  <a href='https://deepcode.vegamo.cn/'>
-    <img src='https://avatars.githubusercontent.com/u/118287711?s=200&v=4' width='100' alt="deepcode-cli"/>
-  </a>
-</p>
-<h1>Deep Code CLI</h1>
 
-[![][npm-release-shield]][npm-release-link] [![][npm-downloads-shield]][npm-downloads-link] [![][github-contributors-shield]][github-contributors-link] [![][github-forks-shield]][github-forks-link] [![][github-stars-shield]][github-stars-link]
-[![][github-issues-shield]][github-issues-link] [![][github-issues-pr-shield]][github-issues-pr-link] [![][github-license-shield]][github-license-link]
+# doku
 
-[English](README-en.md) · 中文
+### 面向终端的 DeepSeek AI 编程助手
 
-<br/>
+[![][npm-release-shield]][npm-release-link] [![][npm-downloads-shield]][npm-downloads-link] [![][github-stars-shield]][github-stars-link] [![][github-issues-shield]][github-issues-link] [![][github-license-shield]][github-license-link]
+
+[English](README.md) · 中文
+
+*坏代码的毒药。*
+
 </div>
 
-[Deep Code](https://github.com/lessweb/deepcode-cli) 是专为 `deepseek-v4` 模型优化的终端 AI 编码助手，支持深度思考、推理强度控制、Agent Skills 以及 MCP 集成。
+---
+
+**doku** 是专为 [DeepSeek](https://deepseek.com) 模型打造的终端 AI 编程助手。支持深度思考、推理强度控制、Agent Skills 以及 MCP 集成——一切尽在终端。
+
+```bash
+npm install -g deepseek-cli
+doku
+```
+
+## 功能特性
+
+- **DeepSeek 深度优化** — 专为 DeepSeek v4 Pro/Flash 调优，原生支持思考模式和推理强度控制
+- **上下文缓存** — 通过 [KV 缓存](https://api-docs.deepseek.com/guides/kv_cache) 降低 API 成本
+- **Agent Skills** — 通过用户级或项目级 skill 文件扩展助手能力
+- **MCP 支持** — 通过 Model Context Protocol 连接 GitHub、浏览器、数据库等
+- **撤销 / 检查点** — 随时将代码和对话恢复到任意历史状态
+- **OpenAI 兼容** — 支持任意 OpenAI 兼容的 API 端点
 
 ## 安装
 
 ```bash
-npm install -g @vegamo/deepcode-cli
+npm install -g deepseek-cli
 ```
 
-在任意项目目录下运行 `deepcode` 即可启动。
+在任意项目目录下运行：
 
-![intro2](resources/intro2.png)
+```bash
+doku
+```
 
 ## 配置
 
-创建 `~/.deepcode/settings.json` 文件，内容如下：
+创建 `~/.doku/settings.json`：
 
 ```json
 {
@@ -44,154 +58,122 @@ npm install -g @vegamo/deepcode-cli
 }
 ```
 
-配置文件与 [Deep Code VSCode 插件](https://github.com/lessweb/deepcode) 共享，无需重复配置。
+项目级配置请在项目根目录创建 `./.doku/settings.json`。
 
-完整配置说明（多层级优先级、环境变量等）请参阅 [docs/configuration.md](docs/configuration.md)。
+也可以使用环境变量——任意 `DOKU_*` 环境变量都会映射到对应配置项：
 
-## 主要功能
+```bash
+DOKU_API_KEY=sk-... DOKU_MODEL=deepseek-v4-flash doku
+```
 
-### **Skills**
-Deep Code CLI 支持 agent skills，允许您扩展助手的能力：
+## 斜杠命令
 
-- **User-level Skills**：从 `~/.agents/skills/` 目录中发现并激活 skills。
-- **Project-level Skills**：从 `./.agents/skills/` 目录中加载项目专属 skills，并兼容旧的 `./.deepcode/skills/` 目录。
+| 命令 | 操作 |
+|------|------|
+| `/` | 打开 skills / 命令菜单 |
+| `/new` | 开始新对话 |
+| `/resume` | 选择历史对话继续 |
+| `/continue` | 继续当前对话，或恢复历史对话 |
+| `/model` | 切换模型、思考模式和推理强度 |
+| `/skills` | 列出可用 skills |
+| `/mcp` | 查看 MCP 服务器状态和可用工具 |
+| `/undo` | 将代码和/或对话恢复到之前的状态 |
+| `/raw` | 切换显示模式（Normal / Lite / Raw） |
+| `/exit` | 退出 |
 
-### **为 DeepSeek 优化**
-- 专门为 DeepSeek 模型性能调优。
-- 通过使用[上下文缓存](https://api-docs.deepseek.com/guides/kv_cache)来降低成本。
-- 原生支持[思考模式](https://api-docs.deepseek.com/guides/thinking_mode)和思考强度控制。
+## 按键说明
 
-## 斜杠命令与按键功能
-
-| 斜杠命令        | 操作                               |
-|-------------|----------------------------------|
-| `/`         | 打开 skills / 命令菜单                 |
-| `/new`      | 开始新对话                            |
-| `/resume`   | 选择历史对话继续                         |
-| `/continue` | 继续当前对话，或选择历史对话恢复                 |
-| `/model`    | 切换模型、思考模式和推理强度                   |
-| `/raw`      | 切换显示模式（Normal / Lite / Raw 滚动回溯） |
-| `/init`     | 初始化 AGENTS.md 文件                 |
-| `/skills`   | 列出可用 skills                      |
-| `/mcp`      | 查看 MCP 服务器状态和可用工具                |
-| `/undo`     | 将代码和/或对话恢复到之前的状态                 |
-| `/exit`     | 退出（也可用连续 `Ctrl+D`）               |
-
-| 按键            | 操作                 |
-|---------------|--------------------|
-| `Enter`       | 发送消息               |
-| `Shift+Enter` | 插入换行（也可用 `Ctrl+J`） |
-| `Ctrl+V`      | 从剪贴板粘贴图片           |
-| `Esc`         | 中断当前模型回复           |
-| 连续 `Ctrl+D`   | 退出                 |
+| 按键 | 操作 |
+|------|------|
+| `Enter` | 发送消息 |
+| `Shift+Enter` | 插入换行 |
+| `Ctrl+V` | 从剪贴板粘贴图片 |
+| `Esc` | 中断当前模型回复 |
+| `@` | 提及文件 |
+| `/` | 打开命令菜单 |
+| 连续 `Ctrl+D` | 退出 |
 
 ## 支持的模型
 
-- `deepseek-v4-pro`（推荐使用）
-- `deepseek-v4-flash`
-- 任何其他 OpenAI 兼容模型
+| 模型 | 说明 |
+|------|------|
+| `deepseek-v4-pro` | 推荐——质量最佳 |
+| `deepseek-v4-flash` | 更快，成本更低 |
+| 任意 OpenAI 兼容模型 | 相应设置 `BASE_URL` 即可 |
 
+## Agent Skills
 
-## 常见问题
+doku 支持 skills——通过 markdown 文件扩展助手能力。
 
-### Deep Code 是否有 VSCode 插件？
+**用户级 skills**（适用于所有项目）：
+```
+~/.agents/skills/<skill-name>/SKILL.md
+```
 
-有的。Deep Code 提供功能完整的 VSCode 插件，可在 [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=vegamo.deepcode-vscode) 安装。插件与 CLI 共享 `~/.deepcode/settings.json` 配置文件，可以在终端和编辑器之间无缝切换。
+**项目级 skills**（适用于当前项目）：
+```
+./.agents/skills/<skill-name>/SKILL.md
+```
 
-### Deep Code 是否支持理解图片？
+## MCP 集成
 
-Deep Code 支持多模态，可使用ctrl+v从剪贴板粘贴图片。但目前 deepseek-v4 不支持多模态。有些模型虽然有多模态能力，但对多轮对话请求的限制太严。目前多模态输入推荐使用火山方舟的 Doubao-Seed-2.0-pro 模型，适配效果最好。
-
-### 怎样在任务完成后自动给 Slack 发消息？
-
-编写一个调用 Slack webhook 的 Shell 通知脚本，然后在 `~/.deepcode/settings.json` 中将 `notify` 字段设为该脚本的完整路径即可。详细步骤请参考 [docs/notify.md](docs/notify.md)。
-
-### 怎样启用联网搜索功能？
-
-Deep Code自带免费的、且大部分情况够用的Web Search工具。如果你希望使用自定义脚本进行联网搜索，可以在 `~/.deepcode/settings.json` 中将 `webSearchTool` 设为脚本的完整路径即可。详细步骤可参考：https://github.com/qorzj/web_search_cli
-
-### 如何配置 MCP？
-
-Deep Code 支持 MCP（Model Context Protocol），可以连接 GitHub、浏览器、数据库等外部服务。在 `settings.json` 中配置 `mcpServers` 字段即可启用，启动后使用 `/mcp` 命令查看已配置的 MCP 服务器状态和可用工具。
-
-详细配置指南：[docs/mcp.md](docs/mcp.md)
-
-### 如何配置 Deep Code 任务完成后发送通知？
-
-当 AI 助手完成一轮任务后，Deep Code 可以自动执行一个通知脚本，将任务结果发送到你指定的渠道（如 Slack、系统通知等）。
-
-详细配置指南：[docs/notify.md](docs/notify.md)
-
-### 是否支持 Coding Plan？
-
-支持。只要把 `~/.deepcode/settings.json` 的 `env.BASE_URL` 配置为 OpenAI 兼容的接口地址就行。以火山方舟的 Coding Plan 为例：
+通过 [Model Context Protocol](https://modelcontextprotocol.io) 连接外部工具。在 `~/.doku/settings.json` 中添加：
 
 ```json
 {
-  "env": {
-    "MODEL": "ark-code-latest",
-    "BASE_URL": "https://ark.cn-beijing.volces.com/api/coding/v3",
-    "API_KEY": "**************"
-  },
-  "thinkingEnabled": true
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "..." }
+    }
+  }
 }
 ```
-## 贡献
 
-欢迎贡献代码！以下是参与方式：
+在 doku 内使用 `/mcp` 查看已连接的服务器和可用工具。
+
+## 开发
 
 ```bash
 # 克隆仓库
-git clone https://github.com/lessweb/deepcode-cli.git
-cd deepcode-cli
+git clone https://github.com/muddlebee/deepseek-cli.git
+cd deepseek-cli
 
 # 安装依赖
 npm install
 
-# 本地开发（类型检查 + lint + 格式检查 + 构建）
-npm run build
+# 直接运行（无需构建）
+npm run dev
 
-# 运行测试
+# 构建
+npm run bundle
+
+# 类型检查 + lint + 格式检查
+npm run check
+
+# 测试
 npm test
-
-# 链接到全局（即本地全局安装）
-npm link
 ```
 
-- 提交 PR 前请确保 `npm run check` 通过（类型检查 + lint + 格式检查）
-- 建议在执行构建前，先执行 `npm run format` 自动格式化代码，避免构建报错
+## 贡献
 
-## 获取帮助
-
-- 在 GitHub Issues 上报告错误或请求功能 (https://github.com/lessweb/deepcode-cli/issues)
+欢迎提交 PR。提交前请确保 `npm run check` 通过。
 
 ## 协议
 
-- MIT
+MIT © [muddlebee](https://github.com/muddlebee)
 
-## 支持我们
-
-如果你觉得这个工具对你有帮助，请考虑通过以下方式支持我们：
-
-- 在 GitHub 上给我们一个 Star (https://github.com/lessweb/deepcode-cli)
-- 向我们提交反馈和建议
-- 分享给你的朋友和同事
+---
 
 <!-- LINK GROUP -->
-
-[npm-release-link]: https://www.npmjs.com/package/@vegamo/deepcode-cli
-[npm-release-shield]: https://img.shields.io/npm/v/@vegamo/deepcode-cli?color=4d6BFE&labelColor=black&logo=npm&logoColor=white&style=flat-square&cacheSeconds=1800
-[npm-downloads-link]: https://www.npmjs.com/package/@vegamo/deepcode-cli
-[npm-downloads-shield]: https://img.shields.io/npm/dt/@vegamo/deepcode-cli?labelColor=black&style=flat-square&color=4d6BFE&cacheSeconds=1800
-[github-contributors-link]: https://github.com/lessweb/deepcode-cli/graphs/contributors
-[github-contributors-shield]: https://img.shields.io/github/contributors/lessweb/deepcode-cli?color=4d6BFE&labelColor=black&style=flat-square&cacheSeconds=1800
-[github-forks-link]: https://github.com/lessweb/deepcode-cli/network/members
-[github-forks-shield]: https://img.shields.io/github/forks/lessweb/deepcode-cli?color=4d6BFE&labelColor=black&style=flat-square&cacheSeconds=1800
-[github-stars-link]: https://github.com/lessweb/deepcode-cli/network/stargazers
-[github-stars-shield]: https://img.shields.io/github/stars/lessweb/deepcode-cli?color=4d6BFE&labelColor=black&style=flat-square&cacheSeconds=1800
-[github-issues-link]: https://github.com/lessweb/deepcode-cli/issues
-[github-issues-shield]: https://img.shields.io/github/issues/lessweb/deepcode-cli?color=4d6BFE&labelColor=black&style=flat-square&cacheSeconds=1800
-[github-issues-pr-link]: https://github.com/lessweb/deepcode-cli/pulls
-[github-issues-pr-shield]: https://img.shields.io/github/issues-pr/lessweb/deepcode-cli?color=4d6BFE&labelColor=black&style=flat-square&cacheSeconds=1800
-[github-license-link]: https://github.com/lessweb/deepcode-cli/blob/main/LICENSE
-[github-license-shield]: https://img.shields.io/github/license/lessweb/deepcode-cli?color=4d6BFE&labelColor=black&style=flat-square&cacheSeconds=1800
+[npm-release-link]: https://www.npmjs.com/package/deepseek-cli
+[npm-release-shield]: https://img.shields.io/npm/v/deepseek-cli?color=0ea5e9&labelColor=18181b&logo=npm&logoColor=white&style=flat-square
+[npm-downloads-link]: https://www.npmjs.com/package/deepseek-cli
+[npm-downloads-shield]: https://img.shields.io/npm/dt/deepseek-cli?labelColor=18181b&style=flat-square&color=0ea5e9
+[github-stars-link]: https://github.com/muddlebee/deepseek-cli/stargazers
+[github-stars-shield]: https://img.shields.io/github/stars/muddlebee/deepseek-cli?color=0ea5e9&labelColor=18181b&style=flat-square
+[github-issues-link]: https://github.com/muddlebee/deepseek-cli/issues
+[github-issues-shield]: https://img.shields.io/github/issues/muddlebee/deepseek-cli?color=0ea5e9&labelColor=18181b&style=flat-square
+[github-license-link]: https://github.com/muddlebee/deepseek-cli/blob/main/LICENSE
+[github-license-shield]: https://img.shields.io/github/license/muddlebee/deepseek-cli?color=0ea5e9&labelColor=18181b&style=flat-square

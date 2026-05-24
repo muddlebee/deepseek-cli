@@ -316,11 +316,11 @@ test("SessionManager marks skills loaded from existing session messages", async 
   const home = createTempDir("deepcode-loaded-skills-home-");
   setHomeDir(home);
 
-  const skillDir = path.join(home, ".agents", "skills", "lessweb-starter");
+  const skillDir = path.join(home, ".agents", "skills", "example-starter");
   fs.mkdirSync(skillDir, { recursive: true });
   fs.writeFileSync(
     path.join(skillDir, "SKILL.md"),
-    "---\nname: lessweb-starter\ndescription: Create Lessweb projects\n---\n# Lessweb Starter\n",
+    "---\nname: example-starter\ndescription: Create example projects\n---\n# Example Starter\n",
     "utf8"
   );
 
@@ -342,9 +342,9 @@ test("SessionManager marks skills loaded from existing session messages", async 
       updateTime: "2026-01-01T00:00:00.000Z",
       meta: {
         skill: {
-          name: "lessweb-starter",
-          path: "~/.agents/skills/lessweb-starter/SKILL.md",
-          description: "Create Lessweb projects",
+          name: "example-starter",
+          path: "~/.agents/skills/example-starter/SKILL.md",
+          description: "Create example projects",
           isLoaded: true,
         },
       },
@@ -353,12 +353,12 @@ test("SessionManager marks skills loaded from existing session messages", async 
   );
 
   const manager = createSessionManager(workspace, "machine-id-loaded-skills");
-  const loadedSkill = (await manager.listSkills("loaded-session")).find((skill) => skill.name === "lessweb-starter");
+  const loadedSkill = (await manager.listSkills("loaded-session")).find((skill) => skill.name === "example-starter");
 
   assert.equal(loadedSkill?.isLoaded, true);
 });
 
-test("SessionManager lists project skills from .agents with legacy .deepcode compatibility", async () => {
+test("SessionManager lists project skills from .agents with legacy .doku compatibility", async () => {
   const workspace = createTempDir("deepcode-project-skills-workspace-");
   const home = createTempDir("deepcode-project-skills-home-");
   setHomeDir(home);
@@ -635,7 +635,7 @@ rl.on("line", (line) => {
   }
 );
 
-test("createSession stores /init and sends the active .deepcode project AGENTS path to the LLM", async () => {
+test("createSession stores /init and sends the active .doku project AGENTS path to the LLM", async () => {
   const workspace = createTempDir("deepcode-init-deepcode-workspace-");
   const home = createTempDir("deepcode-init-deepcode-home-");
   setHomeDir(home);
@@ -661,7 +661,7 @@ test("createSession stores /init and sends the active .deepcode project AGENTS p
     .map((message) => message.content ?? "");
 
   assert.equal(userMessage?.content, "/init");
-  assert.match(openAIUserMessage?.content ?? "", /Update \.\/\.deepcode\/AGENTS\.md/);
+  assert.match(openAIUserMessage?.content ?? "", /Update \.\/.doku\/AGENTS\.md/);
   assert.doesNotMatch(openAIUserMessage?.content ?? "", /Update \.\/AGENTS\.md/);
   assert.ok(systemContents.includes("deepcode project instructions"));
   assert.ok(!systemContents.includes("root project instructions"));

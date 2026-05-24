@@ -180,7 +180,7 @@ function createContext(
 }
 
 function createTempWorkspace(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "deepcode-web-search-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "doku-web-search-"));
   tempDirs.push(dir);
   return dir;
 }

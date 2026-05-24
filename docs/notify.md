@@ -1,10 +1,10 @@
-# Deep Code 任务完成通知
+# doku 任务完成通知
 
-当 AI 助手完成一轮任务后，Deep Code 可以自动执行一个通知脚本，将任务结果发送到你指定的渠道（如 Slack、系统通知等）。
+当 AI 助手完成一轮任务后，doku 可以自动执行一个通知脚本，将任务结果发送到你指定的渠道（如 Slack、系统通知等）。
 
 ## 工作原理
 
-在 `settings.json` 中配置 `notify` 字段，指向一个可执行脚本的完整路径。每次 AI 助手完成任务应答后，Deep Code 会执行该脚本，并通过环境变量注入上下文信息。
+在 `settings.json` 中配置 `notify` 字段，指向一个可执行脚本的完整路径。每次 AI 助手完成任务应答后，doku 会执行该脚本，并通过环境变量注入上下文信息。
 
 ## 注入的环境变量
 
@@ -18,7 +18,7 @@
 
 ## 配置方法
 
-编辑 `~/.deepcode/settings.json`，添加 `notify` 字段：
+编辑 `~/.doku/settings.json`，添加 `notify` 字段：
 
 ```json
 {
@@ -43,7 +43,7 @@
     "API_KEY": "sk-...",
     "SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/*****/****/**********"
   },
-  "notify": "/Users/you/.deepcode/notify-slack.sh"
+  "notify": "/Users/you/.doku/notify-slack.sh"
 }
 ```
 
@@ -58,7 +58,7 @@
 
 ### 2. 创建通知脚本
 
-创建 `~/.deepcode/notify-slack.sh`：
+创建 `~/.doku/notify-slack.sh`：
 
 ```bash
 #!/usr/bin/env bash
@@ -68,14 +68,14 @@ BRANCH=$(git branch --show-current 2>/dev/null)
 curl -X POST "$SLACK_WEBHOOK_URL" \
   -H "Content-type: application/json" \
   --data "{
-      \"text\": \"✅ Deep Code 任务已完成\n · cwd: $CURRENT_DIR\n · Branch: $BRANCH\n · Duration: $DURATION 秒\"
+      \"text\": \"✅ doku 任务已完成\n · cwd: $CURRENT_DIR\n · Branch: $BRANCH\n · Duration: $DURATION 秒\"
   }"
 ```
 
 给脚本添加可执行权限：
 
 ```bash
-chmod +x ~/.deepcode/notify-slack.sh
+chmod +x ~/.doku/notify-slack.sh
 ```
 
 ### 3. 配置 settings.json
@@ -85,7 +85,7 @@ chmod +x ~/.deepcode/notify-slack.sh
   "env": {
     "SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/*****/****/**********"
   },
-  "notify": "/Users/you/.deepcode/notify-slack.sh"
+  "notify": "/Users/you/.doku/notify-slack.sh"
 }
 ```
 
@@ -124,7 +124,7 @@ curl -s -X POST "$WEBHOOK_URL" \
   "env": {
     "WEBHOOK_URL": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxxxx"
   },
-  "notify": "/Users/you/.deepcode/notify-feishu.sh"
+  "notify": "/Users/you/.doku/notify-feishu.sh"
 }
 ```
 
@@ -134,7 +134,7 @@ curl -s -X POST "$WEBHOOK_URL" \
 
 如果你的终端是 iTerm2 或 Windows Terminal，可以直接通过 OSC 9 转义序列弹出终端原生通知，无需额外依赖。
 
-创建 `~/.deepcode/notify.sh`：
+创建 `~/.doku/notify.sh`：
 
 ```bash
 #!/bin/bash
@@ -144,7 +144,7 @@ printf '\x1b]9;DeepCode: task %s (%ss)\x07' "${STATUS:-completed}" "${DURATION}"
 
 ```json
 {
-  "notify": "/Users/you/.deepcode/notify.sh"
+  "notify": "/Users/you/.doku/notify.sh"
 }
 ```
 
@@ -166,7 +166,7 @@ osascript -e "display notification \"任务已${STATUS:-完成}，耗时 ${DURAT
 
 ```json
 {
-  "notify": "/Users/you/.deepcode/notify.sh"
+  "notify": "/Users/you/.doku/notify.sh"
 }
 ```
 
@@ -178,7 +178,7 @@ osascript -e "display notification \"任务已${STATUS:-完成}，耗时 ${DURAT
 sudo apt install libnotify-bin   # Debian/Ubuntu
 ```
 
-创建 `~/.deepcode/notify.sh`：
+创建 `~/.doku/notify.sh`：
 
 ```bash
 #!/bin/bash
@@ -188,7 +188,7 @@ notify-send "DeepCode" "任务已${STATUS:-完成}，耗时 ${DURATION}s"
 
 ```json
 {
-  "notify": "/home/you/.deepcode/notify.sh"
+  "notify": "/home/you/.doku/notify.sh"
 }
 ```
 
@@ -202,7 +202,7 @@ msg %USERNAME% "DeepCode: task %STATUS% (%DURATION%s)"
 
 ```json
 {
-  "notify": "C:\\Users\\you\\.deepcode\\notify.bat"
+  "notify": "C:\\Users\\you\\.doku\\notify.bat"
 }
 ```
 
