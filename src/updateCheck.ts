@@ -35,6 +35,11 @@ export async function promptForPendingUpdate(packageInfo: PackageInfo): Promise<
     return { installed: false };
   }
 
+  if (pending.packageName !== packageInfo.name) {
+    writeUpdateState({ ...state, pending: null });
+    return { installed: false };
+  }
+
   if (compareVersions(packageInfo.version, pending.latestVersion) >= 0) {
     writeUpdateState({ ...state, pending: null });
     return { installed: false };
