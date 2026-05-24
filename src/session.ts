@@ -240,6 +240,7 @@ type SessionManagerOptions = {
     model: string;
     webSearchTool?: string;
     webSearchProvider?: string;
+    env?: Record<string, string>;
     mcpServers?: Record<string, McpServerConfig>;
   };
   renderMarkdown: (text: string) => string;
@@ -267,6 +268,7 @@ export class SessionManager {
     model: string;
     webSearchTool?: string;
     webSearchProvider?: string;
+    env?: Record<string, string>;
     mcpServers?: Record<string, McpServerConfig>;
   };
   private readonly onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
@@ -983,7 +985,7 @@ The candidate skills are as follows:\n\n`;
 
     const runtimeContextMessage = this.buildSystemMessage(
       sessionId,
-      getRuntimeContext(this.projectRoot, promptToolOptions.model, this.getResolvedSettings().webSearchProvider)
+      getRuntimeContext(this.projectRoot, promptToolOptions.model, this.resolveActiveWebSearchProvider())
     );
     this.appendSessionMessage(sessionId, runtimeContextMessage);
 
@@ -1386,6 +1388,15 @@ ${skillMd}
     };
     sessionMessages.splice(endIndex, 0, summaryMessage);
     this.saveSessionMessages(sessionId, sessionMessages);
+  }
+
+  private resolveActiveWebSearchProvider(): string | undefined {
+    const settings = this.getResolvedSettings();
+    const { webSearchProvider, webSearchTool } = settings;
+    if (webSearchTool) return "custom-script";
+    if (webSearchProvider === "tavily" && settings.env?.TAVILY_API_KEY?.trim()) return "tavily";
+    if (webSearchProvider === "firecrawl" && settings.env?.FIRECRAWL_API_KEY?.trim()) return "firecrawl";
+    return undefined;
   }
 
   private getPromptToolOptions(): { model: string; webSearchEnabled: boolean } {
