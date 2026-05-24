@@ -32,10 +32,18 @@ test("getSystemPrompt includes UpdatePlan docs", () => {
 
 test("getSystemPrompt includes compact workflow skill guidance without full skill bodies", () => {
   const prompt = getSystemPrompt("/tmp/project");
+  assert.equal(prompt.includes("# Operating Principles"), true);
+  assert.equal(prompt.includes("Keep execution aligned with the user's request and explicit constraints."), true);
   assert.equal(prompt.includes("# Built-in Workflow Skills"), true);
   assert.equal(prompt.includes("/debug: debugging-and-error-recovery"), true);
   assert.equal(prompt.includes("/review: code-review-and-quality"), true);
   assert.equal(prompt.includes("## The Stop-the-Line Rule"), false);
+});
+
+test("getSystemPrompt Read docs direct directory inspection to ListFiles", () => {
+  const prompt = getSystemPrompt("/tmp/project");
+  assert.equal(prompt.includes("To inspect directories, use the ListFiles tool."), true);
+  assert.equal(prompt.includes("use an ls command via the Bash tool"), false);
 });
 
 test("getSystemPrompt does not include runtime context", () => {
