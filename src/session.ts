@@ -29,6 +29,12 @@ import { logApiError } from "./common/error-logger";
 import { logOpenAIChatCompletionDebug, normalizeDebugError } from "./common/debug-logger";
 import { killProcessTree } from "./common/process-tree";
 import { GitFileHistory } from "./common/file-history";
+import {
+  BUILTIN_SKILL_PATH_PREFIX,
+  BUILTIN_WORKFLOW_SKILLS,
+  getBuiltinSkillPath,
+  getBuiltinWorkflowSkillByName,
+} from "./common/builtin-skills";
 
 const MAX_SESSION_ENTRIES = 50;
 const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/deepseek-cli/api/plugin/new";
@@ -630,7 +636,7 @@ Response in JSON format:
 If none of the available skills match, respond with an empty array, i.e. \`{"skillNames": []}\`.\n
 The candidate skills are as follows:\n\n`;
     const simpleSkills = skills
-      .filter((x) => !x.isLoaded)
+      .filter((x) => !x.isLoaded && !x.path.startsWith(BUILTIN_SKILL_PATH_PREFIX))
       .map((x) => {
         return { name: x.name, description: x.description };
       });
@@ -693,6 +699,15 @@ The candidate skills are as follows:\n\n`;
     const projectAgentsSkillsRoot = path.join(this.projectRoot, ".agents", "skills");
     const skillsByName = new Map<string, SkillInfo>();
 
+    for (const skill of BUILTIN_WORKFLOW_SKILLS) {
+      const skillPath = path.join(getExtensionRoot(), "templates", "skills", skill.templateFile);
+      const skillInfo = this.readSkillInfo(skillPath, getBuiltinSkillPath(skill.name), skill.name);
+      skillsByName.set(skill.name, {
+        ...skillInfo,
+        description: skillInfo.description || skill.description,
+      });
+    }
+
     const collectSkills = (root: string, displayRoot: string): SkillInfo[] => {
       if (!fs.existsSync(root)) {
         return [];
@@ -750,6 +765,13 @@ The candidate skills are as follows:\n\n`;
   }
 
   private resolveSkillPath(skillPath: string): string {
+    if (skillPath.startsWith(BUILTIN_SKILL_PATH_PREFIX)) {
+      const skillName = skillPath.slice(BUILTIN_SKILL_PATH_PREFIX.length);
+      const skill = getBuiltinWorkflowSkillByName(skillName);
+      if (skill) {
+        return path.join(getExtensionRoot(), "templates", "skills", skill.templateFile);
+      }
+    }
     if (skillPath.startsWith("~/")) {
       return path.join(os.homedir(), skillPath.slice(2));
     }

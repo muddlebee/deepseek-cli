@@ -1,4 +1,5 @@
 import type { SkillInfo } from "../session";
+import { BUILTIN_WORKFLOW_SKILLS } from "../common/builtin-skills";
 
 export type SlashCommandKind =
   | "section"
@@ -102,6 +103,22 @@ const SECTION_SKILLS: SlashCommandItem = {
 };
 
 export function buildSlashCommands(skills: SkillInfo[]): SlashCommandItem[] {
+  const skillsByName = new Map(skills.map((skill) => [skill.name, skill]));
+  const workflowCommandItems = BUILTIN_WORKFLOW_SKILLS.flatMap((workflowSkill): SlashCommandItem[] => {
+    const skill = skillsByName.get(workflowSkill.name);
+    if (!skill) {
+      return [];
+    }
+    return [
+      {
+        kind: "skill",
+        name: workflowSkill.command,
+        label: `/${workflowSkill.command}`,
+        description: skill.description || workflowSkill.description,
+        skill,
+      },
+    ];
+  });
   const skillItems: SlashCommandItem[] = skills.map((skill) => ({
     kind: "skill",
     name: skill.name,
@@ -110,9 +127,9 @@ export function buildSlashCommands(skills: SkillInfo[]): SlashCommandItem[] {
     skill,
   }));
   if (skillItems.length === 0) {
-    return [SECTION_COMMANDS, ...BUILTIN_SLASH_COMMANDS];
+    return [SECTION_COMMANDS, ...BUILTIN_SLASH_COMMANDS, ...workflowCommandItems];
   }
-  return [SECTION_COMMANDS, ...BUILTIN_SLASH_COMMANDS, SECTION_SKILLS, ...skillItems];
+  return [SECTION_COMMANDS, ...BUILTIN_SLASH_COMMANDS, ...workflowCommandItems, SECTION_SKILLS, ...skillItems];
 }
 
 export function filterSlashCommands(items: SlashCommandItem[], token: string): SlashCommandItem[] {

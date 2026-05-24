@@ -54,6 +54,11 @@ if (args.includes("--help") || args.includes("-h")) {
       "  /undo            Restore code and/or conversation to a previous point",
       "  /mcp             Show MCP server status and available tools",
       "  /raw             Toggle display mode for viewing or collapsing reasoning content",
+      "  /ideate          Load idea-refine workflow for refining ideas",
+      "  /plan            Load planning-and-task-breakdown workflow",
+      "  /debug           Load debugging-and-error-recovery workflow",
+      "  /build           Load incremental-implementation workflow",
+      "  /review          Load code-review-and-quality workflow",
       "  /exit            Quit",
       "  ctrl+c twice     Quit",
     ].join("\n") + "\n"

@@ -837,6 +837,17 @@ export const PromptInput = React.memo(function PromptInput({
     if (trimmed.startsWith("/")) {
       const exactMatch = findExactSlashCommand(slashItems, trimmed.split(/\s+/, 1)[0]);
       if (exactMatch) {
+        const skillPromptSubmission = buildSkillPromptSubmission(
+          exactMatch,
+          expandPasteMarkers(buffer.text, pastesRef.current),
+          imageUrls,
+          selectedSkills
+        );
+        if (skillPromptSubmission) {
+          onSubmit(skillPromptSubmission);
+          resetPromptInput();
+          return;
+        }
         handleSlashSelection(exactMatch);
         return;
       }
@@ -981,6 +992,34 @@ export function buildInitPromptSubmission(selectedSkills: SkillInfo[]): PromptSu
     text: "/init",
     imageUrls: [],
     selectedSkills: selectedSkills.length > 0 ? selectedSkills : undefined,
+  };
+}
+
+export function buildSkillPromptSubmission(
+  item: SlashCommandItem,
+  text: string,
+  imageUrls: string[],
+  selectedSkills: SkillInfo[]
+): PromptSubmission | null {
+  if (item.kind !== "skill" || !item.skill) {
+    return null;
+  }
+
+  const trimmedStart = text.trimStart();
+  const commandToken = trimmedStart.split(/\s+/, 1)[0] ?? "";
+  if (commandToken !== item.label) {
+    return null;
+  }
+
+  const promptText = trimmedStart.slice(commandToken.length).trimStart();
+  if (!promptText && imageUrls.length === 0) {
+    return null;
+  }
+
+  return {
+    text: promptText,
+    imageUrls,
+    selectedSkills: addUniqueSkill(selectedSkills, item.skill),
   };
 }
 

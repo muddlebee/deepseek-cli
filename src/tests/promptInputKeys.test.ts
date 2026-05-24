@@ -19,6 +19,7 @@ import {
   toggleSkillSelection,
   renderBufferWithCursor,
   buildInitPromptSubmission,
+  buildSkillPromptSubmission,
   buildPromptDraftFromSessionMessage,
   dispatchTerminalInput,
   disableTerminalExtendedKeys,
@@ -259,6 +260,29 @@ test("buildInitPromptSubmission preserves manually selected skills", () => {
     selectedSkills: [skill],
   });
   assert.deepEqual(buildInitPromptSubmission([]), { text: "/init", imageUrls: [], selectedSkills: undefined });
+});
+
+test("buildSkillPromptSubmission submits slash command arguments with selected skill", () => {
+  const skill: SkillInfo = {
+    name: "debugging-and-error-recovery",
+    path: "builtin:debugging-and-error-recovery",
+    description: "Debug systematically",
+  };
+  const selected: SkillInfo = { name: "other", path: "/skills/other/SKILL.md", description: "Other skill" };
+
+  assert.deepEqual(
+    buildSkillPromptSubmission(
+      { kind: "skill", name: "debug", label: "/debug", description: "Debug", skill },
+      "/debug failing test output",
+      [],
+      [selected]
+    ),
+    {
+      text: "failing test output",
+      imageUrls: [],
+      selectedSkills: [selected, skill],
+    }
+  );
 });
 
 test("selected skill helpers format, dedupe, toggle, and clear slash tokens", () => {

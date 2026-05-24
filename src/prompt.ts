@@ -7,6 +7,7 @@ import ejs from "ejs";
 import type { SessionMessage } from "./session";
 import { findGitBashPath, resolveShellPath } from "./common/shell-utils";
 import { supportsMultimodal } from "./common/model-capabilities";
+import { BUILTIN_WORKFLOW_SKILLS } from "./common/builtin-skills";
 
 const COMPACT_PROMPT_BASE = `Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
 This summary should be thorough in capturing technical details, code patterns, and architectural decisions that would be essential for continuing development work without losing context.
@@ -90,7 +91,16 @@ Here's an example of how your output should be structured:
 
 </summary>`;
 
+const WORKFLOW_SKILLS_PROMPT = BUILTIN_WORKFLOW_SKILLS.map((skill) => `- /${skill.command}: ${skill.name}`).join("\n");
+
 const SYSTEM_PROMPT_BASE = `You are doku, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
+
+# Built-in Workflow Skills
+
+doku includes bundled workflow skills that can be loaded by slash command or explicit skill selection:
+${WORKFLOW_SKILLS_PROMPT}
+
+When a workflow skill is loaded in the conversation, follow that skill document for the current task. Do not assume the full contents of unloaded skills; ask for or load the relevant skill when its workflow is needed.
 
 IMPORTANT: Never fabricate URLs unrelated to programming. For programming links, only use: 1) context provided by the user; 2) official documentation domains you are certain about. Before outputting a link, verify it exists in your context memory; if it does not, explicitly state that you cannot provide it.`;
 
