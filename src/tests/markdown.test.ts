@@ -10,10 +10,10 @@ test("renderMarkdown returns empty string for empty input", () => {
   assert.equal(renderMarkdown(""), "");
 });
 
-test("renderMarkdown preserves heading text", () => {
+test("renderMarkdown preserves heading text without # prefix", () => {
   const result = stripAnsi(renderMarkdown("# Title"));
   assert.equal(result.includes("Title"), true);
-  assert.equal(result.includes("#"), true);
+  assert.equal(result.includes("#"), false, "# prefix should be hidden");
 });
 
 test("renderMarkdown preserves code fences with language tag", () => {

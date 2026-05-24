@@ -32,9 +32,7 @@ function splitByFences(text: string): FenceSegment[] {
   let fenceBody: string[] = [];
 
   const flushText = () => {
-    if (buffer.length === 0) {
-      return;
-    }
+    if (buffer.length === 0) return;
     segments.push({ kind: "text", body: buffer.join("\n") });
     buffer = [];
   };
@@ -71,6 +69,8 @@ function splitByFences(text: string): FenceSegment[] {
 
   return segments;
 }
+
+// ─── Table rendering ─────────────────────────────────────────────────────────
 
 const TABLE_ROW_RE = /^\s*\|.*\|\s*$/;
 const TABLE_SEP_RE = /^\s*\|[\s|:-]+\|\s*$/;
@@ -130,32 +130,40 @@ function renderTable(tableLines: string[]): string {
     }
   }
 
-  const top = "┌" + colWidths.map((w) => "─".repeat(w)).join("┬") + "┐";
-  const mid = "├" + colWidths.map((w) => "─".repeat(w)).join("┼") + "┤";
-  const bot = "└" + colWidths.map((w) => "─".repeat(w)).join("┴") + "┘";
-  const border = chalk.dim;
+  const b = chalk.dim;
+  const top = b("┌" + colWidths.map((w) => "─".repeat(w)).join("┬") + "┐");
+  const mid = b("├" + colWidths.map((w) => "─".repeat(w)).join("┼") + "┤");
+  const row_div = b("├" + colWidths.map((w) => "╌".repeat(w)).join("┼") + "┤");
+  const bot = b("└" + colWidths.map((w) => "─".repeat(w)).join("┴") + "┘");
 
   const renderRow = (styled: string[]): string => {
-    const cells: string[] = styled.map((s, i) => {
+    const cells = styled.map((s, i) => {
       const pad = colWidths[i] - 2 - stripAnsi(s).length;
       return ` ${s}${" ".repeat(Math.max(0, pad))} `;
     });
     for (let i = styled.length; i < colCount; i++) {
       cells.push(" ".repeat(colWidths[i]));
     }
-    return border("│") + cells.join(border("│")) + border("│");
+    return b("│") + cells.join(b("│")) + b("│");
   };
 
-  const out: string[] = [border(top)];
+  const out: string[] = [top];
   for (let i = 0; i < rows.length; i++) {
-    if (i > 0 && rows[i].isHeader === false && rows[i - 1].isHeader === true) {
-      out.push(border(mid));
+    const prev = rows[i - 1];
+    if (i > 0) {
+      if (!rows[i].isHeader && prev.isHeader) {
+        out.push(mid); // bold header ↔ data separator
+      } else if (!rows[i].isHeader && !prev.isHeader) {
+        out.push(row_div); // light dashed divider between data rows
+      }
     }
     out.push(renderRow(rows[i].styled));
   }
-  out.push(border(bot));
+  out.push(bot);
   return out.join("\n");
 }
+
+// ─── Block rendering ──────────────────────────────────────────────────────────
 
 function renderInlineBlock(text: string): string {
   const lines = text.split("\n");
@@ -182,11 +190,21 @@ function renderInlineBlock(text: string): string {
 }
 
 function renderInlineLine(line: string): string {
+  // Horizontal rule — render as a full-width dim line
+  if (/^\s*(?:[-]{3,}|[*]{3,}|[_]{3,})\s*$/.test(line)) {
+    const width = process.stdout.columns || 80;
+    return chalk.dim("─".repeat(width));
+  }
+
+  // Headings — drop the ### prefix, use depth for visual weight
   const headingMatch = /^(\s*)(#{1,6})\s+(.*)$/.exec(line);
   if (headingMatch) {
     const [, lead, hashes, content] = headingMatch;
-    const styled = hashes.length <= 2 ? chalk.bold.cyanBright(content) : chalk.bold.cyan(content);
-    return `${lead}${chalk.dim(hashes)} ${styled}`;
+    const depth = hashes.length;
+    const rendered = renderInlineSpans(content);
+    const styled =
+      depth <= 2 ? chalk.bold.cyanBright(rendered) : depth === 3 ? chalk.bold.cyan(rendered) : chalk.cyan(rendered);
+    return `${lead}${styled}`;
   }
 
   const listMatch = /^(\s*)([-*+])\s+(.*)$/.exec(line);
@@ -210,14 +228,34 @@ function renderInlineLine(line: string): string {
   return renderInlineSpans(line);
 }
 
+// ─── Inline spans ─────────────────────────────────────────────────────────────
+
 function renderInlineSpans(text: string): string {
-  if (!text) {
-    return text;
-  }
-  let result = text;
-  result = result.replace(/`([^`]+)`/g, (_, inner) => chalk.cyan(inner));
+  if (!text) return text;
+
+  // Protect code spans first so inner syntax isn't processed
+  const codeSlots: string[] = [];
+  let result = text.replace(/`([^`]+)`/g, (_, inner) => {
+    codeSlots.push(chalk.cyan(inner));
+    return `\x00CODE${codeSlots.length - 1}\x00`;
+  });
+
+  // Links: [label](url) — show label styled, drop URL (keeps output clean)
+  result = result.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (_, label, url) => chalk.cyan.underline(label) + chalk.dim(` (${url})`)
+  );
+
+  // Strikethrough
+  result = result.replace(/~~([^~]+)~~/g, (_, inner) => chalk.dim(inner));
+
+  // Bold and italic
   result = result.replace(/\*\*([^*]+)\*\*/g, (_, inner) => chalk.bold(inner));
   result = result.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_, inner) => chalk.italic(inner));
   result = result.replace(/_([^_\n]+)_/g, (_, inner) => chalk.italic(inner));
+
+  // Restore code spans
+  result = result.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeSlots[Number(i)]);
+
   return result;
 }
