@@ -37,16 +37,6 @@ import {
 } from "./common/builtin-skills";
 
 const MAX_SESSION_ENTRIES = 50;
-
-// Skills that duplicate the built-in WebSearch tool. Suppressed when a web
-// search provider is already configured and ready.
-const WEB_SEARCH_SKILL_NAMES = new Set([
-  "firecrawl-search",
-  "serpapi-web-search",
-  "web-scraper",
-  "firecrawl",
-  "firecrawl-agent",
-]);
 const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/doku-deepseek-cli/api/plugin/new";
 const NEW_PROMPT_REPORT_TIMEOUT_MS = 3000;
 const DEFAULT_COMPACT_PROMPT_TOKEN_THRESHOLD = 128 * 1024;
@@ -1013,10 +1003,7 @@ The candidate skills are as follows:\n\n`;
       const skillNames = await this.identifyMatchingSkillNames(skills, userPrompt.text, { signal });
       this.throwIfAborted(signal);
       const skillSet = new Set(skillNames);
-      const webSearchReady = !!this.resolveActiveWebSearchProvider();
-      const matchedSkill = skills.filter(
-        (skill) => skillSet.has(skill.name) && !(webSearchReady && WEB_SEARCH_SKILL_NAMES.has(skill.name))
-      );
+      const matchedSkill = skills.filter((skill) => skillSet.has(skill.name));
       if (Array.isArray(userPrompt.skills)) {
         userPrompt.skills.push(...matchedSkill);
       } else if (matchedSkill.length > 0) {
@@ -1080,10 +1067,7 @@ ${skillMd}
       const skillNames = await this.identifyMatchingSkillNames(skills, userPrompt.text, { signal, sessionId });
       this.throwIfAborted(signal);
       const skillSet = new Set(skillNames);
-      const webSearchReady = !!this.resolveActiveWebSearchProvider();
-      const matchedSkill = skills.filter(
-        (skill) => skillSet.has(skill.name) && !(webSearchReady && WEB_SEARCH_SKILL_NAMES.has(skill.name))
-      );
+      const matchedSkill = skills.filter((skill) => skillSet.has(skill.name));
       if (Array.isArray(userPrompt.skills)) {
         userPrompt.skills.push(...matchedSkill);
       } else if (matchedSkill.length > 0) {
