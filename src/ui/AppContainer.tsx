@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { AppContext } from "./contexts";
 import { App } from "./App";
 import { RawModeProvider } from "./contexts/RawModeContext";
+import { SetupScreen } from "./SetupScreen";
+import { resolveCurrentSettings, writeSettings } from "./App";
 
 const AppContainer: React.FC<{
   projectRoot: string;
@@ -9,6 +11,22 @@ const AppContainer: React.FC<{
   initialPrompt: string | undefined;
   onRestart: () => void;
 }> = ({ version, projectRoot, initialPrompt, onRestart }) => {
+  const [needsSetup] = useState(() => !resolveCurrentSettings(projectRoot).apiKey);
+  const [setupDone, setSetupDone] = useState(false);
+
+  function handleSetupComplete({ apiKey, baseURL }: { apiKey: string; baseURL: string }): void {
+    writeSettings({ env: { API_KEY: apiKey, BASE_URL: baseURL } });
+    setSetupDone(true);
+  }
+
+  if (needsSetup && !setupDone) {
+    return (
+      <AppContext.Provider value={{ version }}>
+        <SetupScreen onComplete={handleSetupComplete} />
+      </AppContext.Provider>
+    );
+  }
+
   return (
     <AppContext.Provider value={{ version: version }}>
       <RawModeProvider>
