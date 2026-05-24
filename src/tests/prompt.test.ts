@@ -30,6 +30,22 @@ test("getSystemPrompt includes UpdatePlan docs", () => {
   assert.equal(prompt.includes("The `plan` argument is a markdown string, not an array of step objects."), true);
 });
 
+test("getSystemPrompt includes compact workflow skill guidance without full skill bodies", () => {
+  const prompt = getSystemPrompt("/tmp/project");
+  assert.equal(prompt.includes("# Operating Principles"), true);
+  assert.equal(prompt.includes("Keep execution aligned with the user's request and explicit constraints."), true);
+  assert.equal(prompt.includes("# Built-in Workflow Skills"), true);
+  assert.equal(prompt.includes("/debug: debugging-and-error-recovery"), true);
+  assert.equal(prompt.includes("/review: code-review-and-quality"), true);
+  assert.equal(prompt.includes("## The Stop-the-Line Rule"), false);
+});
+
+test("getSystemPrompt Read docs direct directory inspection to ListFiles", () => {
+  const prompt = getSystemPrompt("/tmp/project");
+  assert.equal(prompt.includes("To inspect directories, use the ListFiles tool."), true);
+  assert.equal(prompt.includes("use an ls command via the Bash tool"), false);
+});
+
 test("getSystemPrompt does not include runtime context", () => {
   const prompt = getSystemPrompt("/tmp/project");
   assert.equal(prompt.includes("# Local Workspace Environment"), false);
@@ -77,6 +93,11 @@ test("runtime prompt assets live under templates", () => {
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "prompts", "init_command.md.ejs")), true);
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "agent-drift-guard.md")), true);
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "plan-and-execute.md")), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "idea-refine.md")), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "planning-and-task-breakdown.md")), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "debugging-and-error-recovery.md")), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "incremental-implementation.md")), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, "templates", "skills", "code-review-and-quality.md")), true);
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "tools", "read.md")), false);
   assert.equal(fs.existsSync(path.join(repoRoot, "docs", "tools")), false);
   assert.equal(fs.existsSync(path.join(repoRoot, "docs", "prompts")), false);

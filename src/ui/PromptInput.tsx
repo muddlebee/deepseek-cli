@@ -37,6 +37,7 @@ import {
   undoPromptEdit,
 } from "./promptUndoRedo";
 import { buildSlashCommands, filterSlashCommands, findExactSlashCommand } from "./slashCommands";
+import { getBuiltinWorkflowSkillByName } from "../common/builtin-skills";
 import type { SlashCommandItem } from "./slashCommands";
 import {
   filterFileMentionItems,
@@ -247,21 +248,16 @@ export const PromptInput = React.memo(function PromptInput({
     hadFileMentionTokenRef.current = hasFileMentionToken;
   }, [hasFileMentionToken, refreshFileMentionItems]);
 
+  // Reset to first selectable item whenever the menu content changes or appears.
+  // Intentionally omits menuIndex from deps so navigation (↑↓) doesn't re-trigger this.
   useEffect(() => {
     if (!showMenu) {
       setMenuIndex(0);
       return;
     }
-    if (menuIndex >= slashMenu.length) {
-      setMenuIndex(Math.max(0, slashMenu.length - 1));
-      return;
-    }
-    // Ensure the active index never lands on a section header
-    if (slashMenu[menuIndex]?.kind === "section") {
-      const first = slashMenu.findIndex((item) => item.kind !== "section");
-      if (first !== -1) setMenuIndex(first);
-    }
-  }, [slashMenu, showMenu, menuIndex]);
+    const first = slashMenu.findIndex((item) => item.kind !== "section");
+    setMenuIndex(first !== -1 ? first : 0);
+  }, [slashMenu, showMenu]);
 
   useEffect(() => {
     if (!fileMentionKey) {
@@ -456,6 +452,10 @@ export const PromptInput = React.memo(function PromptInput({
       }
 
       if (key.backspace) {
+        if (buffer.text === "" && selectedSkills.length > 0) {
+          setSelectedSkills((prev) => prev.slice(0, -1));
+          return;
+        }
         updateBuffer((s) => deletePasteMarkerBackward(s, pastesRef.current) ?? backspace(s));
         return;
       }
@@ -837,6 +837,17 @@ export const PromptInput = React.memo(function PromptInput({
     if (trimmed.startsWith("/")) {
       const exactMatch = findExactSlashCommand(slashItems, trimmed.split(/\s+/, 1)[0]);
       if (exactMatch) {
+        const skillPromptSubmission = buildSkillPromptSubmission(
+          exactMatch,
+          expandPasteMarkers(buffer.text, pastesRef.current),
+          imageUrls,
+          selectedSkills
+        );
+        if (skillPromptSubmission) {
+          onSubmit(skillPromptSubmission);
+          resetPromptInput();
+          return;
+        }
         handleSlashSelection(exactMatch);
         return;
       }
@@ -880,17 +891,18 @@ export const PromptInput = React.memo(function PromptInput({
           <Text dimColor>{` (${IMAGE_ATTACHMENT_CLEAR_HINT})`}</Text>
         </Box>
       ) : null}
-      {selectedSkills.length > 0 ? (
-        <Box>
-          <Text color="magenta" wrap="truncate-end">
-            {formatSelectedSkillsStatus(selectedSkills)}
-          </Text>
-          <Text dimColor> (use /skills to edit)</Text>
-        </Box>
-      ) : null}
       {/* Input */}
       <Box borderStyle="round" borderColor={busy ? "#6366f1" : "#0ea5e9"} paddingX={1}>
         <PromptPrefixLine busy={busy} />
+        {selectedSkills.map((skill) => {
+          const builtin = getBuiltinWorkflowSkillByName(skill.name);
+          const label = builtin ? builtin.command : skill.name;
+          return (
+            <Text key={skill.name} color="#a855f7">
+              [{label}]{" "}
+            </Text>
+          );
+        })}
         <Text>{renderBufferWithCursor(buffer, !disabled && hasTerminalFocus, placeholder, pastesRef.current)}</Text>
         {inlineHint ? <Text dimColor>{inlineHint}</Text> : null}
       </Box>
@@ -981,6 +993,34 @@ export function buildInitPromptSubmission(selectedSkills: SkillInfo[]): PromptSu
     text: "/init",
     imageUrls: [],
     selectedSkills: selectedSkills.length > 0 ? selectedSkills : undefined,
+  };
+}
+
+export function buildSkillPromptSubmission(
+  item: SlashCommandItem,
+  text: string,
+  imageUrls: string[],
+  selectedSkills: SkillInfo[]
+): PromptSubmission | null {
+  if (item.kind !== "skill" || !item.skill) {
+    return null;
+  }
+
+  const trimmedStart = text.trimStart();
+  const commandToken = trimmedStart.split(/\s+/, 1)[0] ?? "";
+  if (commandToken !== item.label) {
+    return null;
+  }
+
+  const promptText = trimmedStart.slice(commandToken.length).trimStart();
+  if (!promptText && imageUrls.length === 0) {
+    return null;
+  }
+
+  return {
+    text: promptText,
+    imageUrls,
+    selectedSkills: addUniqueSkill(selectedSkills, item.skill),
   };
 }
 

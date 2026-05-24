@@ -701,6 +701,120 @@ test("createSession appends default system prompts in prefix-cache-friendly orde
   assert.equal(systemContents[3], "root project instructions");
 });
 
+test("listSkills includes bundled workflow skills and lets project skills override them", async () => {
+  const workspace = createTempDir("doku-builtin-skills-workspace-");
+  const home = createTempDir("doku-builtin-skills-home-");
+  setHomeDir(home);
+
+  fs.mkdirSync(path.join(workspace, ".agents", "skills", "debugging-and-error-recovery"), { recursive: true });
+  fs.writeFileSync(
+    path.join(workspace, ".agents", "skills", "debugging-and-error-recovery", "SKILL.md"),
+    [
+      "---",
+      "name: debugging-and-error-recovery",
+      "description: Project-specific debugging workflow",
+      "---",
+      "",
+      "# Project Debugging",
+    ].join("\n"),
+    "utf8"
+  );
+
+  const manager = createSessionManager(workspace, "machine-id-builtin-skills");
+  const skills = await manager.listSkills();
+  const skillByName = new Map(skills.map((skill) => [skill.name, skill]));
+
+  assert.equal(skillByName.get("idea-refine")?.path, "builtin:idea-refine");
+  assert.equal(skillByName.get("planning-and-task-breakdown")?.path, "builtin:planning-and-task-breakdown");
+  assert.equal(
+    skillByName.get("debugging-and-error-recovery")?.path,
+    "./.agents/skills/debugging-and-error-recovery/SKILL.md"
+  );
+  assert.equal(skillByName.get("debugging-and-error-recovery")?.description, "Project-specific debugging workflow");
+});
+
+test("createSession loads bundled workflow skill documents from builtin paths", async () => {
+  const workspace = createTempDir("doku-load-builtin-skill-workspace-");
+  const home = createTempDir("doku-load-builtin-skill-home-");
+  setHomeDir(home);
+  globalThis.fetch = (async () => ({ ok: true, text: async () => "" }) as Response) as typeof fetch;
+
+  const manager = createSessionManager(workspace, "machine-id-load-builtin-skill");
+  (manager as any).activateSession = async () => {};
+
+  const sessionId = await manager.createSession({
+    text: "debug this failure",
+    skills: [
+      {
+        name: "debugging-and-error-recovery",
+        path: "builtin:debugging-and-error-recovery",
+        description: "Debug systematically",
+      },
+    ],
+  });
+  const loadedSkillMessage = manager.listSessionMessages(sessionId).find((message) => {
+    return message.role === "system" && message.meta?.skill?.name === "debugging-and-error-recovery";
+  });
+
+  assert.ok(loadedSkillMessage);
+  assert.match(loadedSkillMessage?.content ?? "", /<debugging-and-error-recovery-skill/);
+  assert.match(loadedSkillMessage?.content ?? "", /# Debugging and Error Recovery/);
+});
+
+test("createSession does not auto-match extra skills when a skill is explicitly selected", async () => {
+  const workspace = createTempDir("doku-explicit-skill-create-workspace-");
+  const home = createTempDir("doku-explicit-skill-create-home-");
+  setHomeDir(home);
+
+  const manager = createSessionManager(workspace, "machine-id-explicit-skill-create");
+  let autoMatched = false;
+  (manager as any).identifyMatchingSkillNames = async () => {
+    autoMatched = true;
+    return ["spec-driven-development"];
+  };
+  (manager as any).activateSession = async () => {};
+
+  const sessionId = await manager.createSession({
+    text: "a super CLI",
+    skills: [{ name: "idea-refine", path: "builtin:idea-refine", description: "Refine ideas" }],
+  });
+  const loadedSkillNames = manager
+    .listSessionMessages(sessionId)
+    .filter((message) => message.role === "system" && message.meta?.skill)
+    .map((message) => message.meta?.skill?.name);
+
+  assert.equal(autoMatched, false);
+  assert.deepEqual(loadedSkillNames, ["idea-refine"]);
+});
+
+test("replySession does not auto-match extra skills when a skill is explicitly selected", async () => {
+  const workspace = createTempDir("doku-explicit-skill-reply-workspace-");
+  const home = createTempDir("doku-explicit-skill-reply-home-");
+  setHomeDir(home);
+
+  const manager = createSessionManager(workspace, "machine-id-explicit-skill-reply");
+  (manager as any).activateSession = async () => {};
+
+  const sessionId = await manager.createSession({ text: "" });
+  let autoMatched = false;
+  (manager as any).identifyMatchingSkillNames = async () => {
+    autoMatched = true;
+    return ["spec-driven-development"];
+  };
+
+  await manager.replySession(sessionId, {
+    text: "a super CLI",
+    skills: [{ name: "idea-refine", path: "builtin:idea-refine", description: "Refine ideas" }],
+  });
+  const loadedSkillNames = manager
+    .listSessionMessages(sessionId)
+    .filter((message) => message.role === "system" && message.meta?.skill)
+    .map((message) => message.meta?.skill?.name);
+
+  assert.equal(autoMatched, false);
+  assert.deepEqual(loadedSkillNames, ["idea-refine"]);
+});
+
 test("replySession stores /init and sends the active root project AGENTS path to the LLM", async () => {
   const workspace = createTempDir("deepcode-init-root-workspace-");
   const home = createTempDir("deepcode-init-root-home-");
