@@ -65,7 +65,7 @@ const SkillsDropdown: React.FC<{
         statusIndicator: skill.isLoaded ? { symbol: "✓", color: "green" } : undefined,
       }))}
       activeIndex={skillsDropdownIndex}
-      activeColor="#229ac3"
+      activeColor="#0ea5e9"
       maxVisible={6}
     />
   );

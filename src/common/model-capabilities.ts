@@ -1,4 +1,9 @@
-export const DEEPSEEK_V4_MODELS = new Set(["deepseek-v4-flash", "deepseek-v4-pro"]);
+export const DEEPSEEK_V4_MODELS = new Set([
+  "deepseek-v4-flash",
+  "deepseek-v4-pro",
+  "deepseek-chat", // legacy alias → deepseek-v4-flash
+  "deepseek-reasoner", // legacy alias → deepseek-v4-flash
+]);
 
 export const NON_MULTIMODAL_MODELS = new Set([
   "deepseek-v4-pro",

@@ -3,6 +3,8 @@ import type { ReasoningEffort } from "../settings";
 import { handleAskUserQuestionTool } from "./ask-user-question-handler";
 import { handleBashTool } from "./bash-handler";
 import { handleEditTool } from "./edit-handler";
+import { handleGrepTool } from "./grep-handler";
+import { handleListFilesTool } from "./list-files-handler";
 import { handleReadTool } from "./read-handler";
 import { handleUpdatePlanTool } from "./update-plan-handler";
 import { handleWebSearchTool } from "./web-search-handler";
@@ -124,22 +126,28 @@ export class ToolExecutor {
       .map((toolCall) => this.parseToolCall(toolCall))
       .filter((toolCall): toolCall is ToolCall => Boolean(toolCall));
 
-    const executions: ToolCallExecution[] = [];
-    for (const toolCall of parsedCalls) {
-      if (hooks?.shouldStop?.()) {
-        break;
+    // AskUserQuestion blocks on user input — the whole batch must run
+    // sequentially so the UI can pause and wait for the response before
+    // processing any subsequent tool calls.
+    const hasBlockingTool = parsedCalls.some((tc) => tc.function.name === "AskUserQuestion");
+
+    if (hasBlockingTool) {
+      const executions: ToolCallExecution[] = [];
+      for (const toolCall of parsedCalls) {
+        if (hooks?.shouldStop?.()) break;
+        const result = await this.executeToolCall(sessionId, toolCall, hooks);
+        executions.push({ toolCallId: toolCall.id, content: this.formatToolResult(result), result });
+        if (hooks?.shouldStop?.()) break;
       }
-      const result = await this.executeToolCall(sessionId, toolCall, hooks);
-      executions.push({
-        toolCallId: toolCall.id,
-        content: this.formatToolResult(result),
-        result,
-      });
-      if (hooks?.shouldStop?.()) {
-        break;
-      }
+      return executions;
     }
-    return executions;
+
+    return Promise.all(
+      parsedCalls.map(async (toolCall) => {
+        const result = await this.executeToolCall(sessionId, toolCall, hooks);
+        return { toolCallId: toolCall.id, content: this.formatToolResult(result), result };
+      })
+    );
   }
 
   private registerToolHandlers(): void {
@@ -150,6 +158,8 @@ export class ToolExecutor {
     this.toolHandlers.set("AskUserQuestion", handleAskUserQuestionTool);
     this.toolHandlers.set("UpdatePlan", handleUpdatePlanTool);
     this.toolHandlers.set("WebSearch", handleWebSearchTool);
+    this.toolHandlers.set("Grep", handleGrepTool);
+    this.toolHandlers.set("ListFiles", handleListFilesTool);
   }
 
   private parseToolCall(toolCall: unknown): ToolCall | null {

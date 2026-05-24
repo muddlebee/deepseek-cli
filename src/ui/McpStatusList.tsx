@@ -40,7 +40,7 @@ export function McpStatusList({ statuses, onCancel, onReconnect }: Props): React
     return (
       <Box flexDirection="column" marginLeft={1} paddingX={1} gap={1} borderStyle="round" borderDimColor>
         <Box flexDirection="column">
-          <Text color="#229ac3" bold>
+          <Text color="#0ea5e9" bold>
             Manage MCP servers
           </Text>
           <Text dimColor>0 servers</Text>
@@ -190,7 +190,7 @@ function ServerListView({
       <Box flexDirection="column" borderStyle="round" borderDimColor flexGrow={1} overflow="hidden">
         {/* Header row */}
         <Box paddingX={1} gap={1}>
-          <Text bold color="#229ac3">
+          <Text bold color="#0ea5e9">
             Manage MCP servers
           </Text>
           <Box gap={1}>
@@ -300,7 +300,7 @@ function ServerRow({
       {/* Server row */}
       <Box gap={2}>
         <Box width={labelColumnWidth} flexShrink={0}>
-          <Text color={selected ? "#229ac3" : undefined}>
+          <Text color={selected ? "#0ea5e9" : undefined}>
             {selected ? "> " : "  "}
             <Text color={color}>{icon} </Text>
             <Text bold>{status.name}</Text>
@@ -445,7 +445,7 @@ function ServerDetailView({
         {/* Header row */}
         <Box paddingX={1} gap={1}>
           <Text color={statusColor}>{statusIcon} </Text>
-          <Text bold color="#229ac3" wrap="truncate-end">
+          <Text bold color="#0ea5e9" wrap="truncate-end">
             {server.name}
           </Text>
           <Text dimColor>— {server.status === "ready" ? "Details" : "Status"}</Text>
@@ -525,11 +525,11 @@ function ServerDetailView({
 function ItemRow({ item, selected }: { item: { type: string; name: string }; selected: boolean }): React.ReactElement {
   const isAction = item.type === "action";
   const icon = isAction ? "↻" : item.type === "tool" ? "🔧" : item.type === "prompt" ? "📝" : "📦";
-  const color = isAction && selected ? "#ff9900" : selected ? "#229ac3" : undefined;
+  const color = isAction && selected ? "#ff9900" : selected ? "#0ea5e9" : undefined;
 
   return (
     <Box height={1} flexDirection="row">
-      <Text color={selected ? "#229ac3" : undefined}>{selected ? "> " : "  "}</Text>
+      <Text color={selected ? "#0ea5e9" : undefined}>{selected ? "> " : "  "}</Text>
       <Text dimColor>{icon} </Text>
       <Text color={color} dimColor={!selected} bold={isAction} wrap="truncate-end">
         {isAction ? `[${item.name}]` : item.name}

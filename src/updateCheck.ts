@@ -58,7 +58,7 @@ export async function promptForPendingUpdate(packageInfo: PackageInfo): Promise<
     if (ok) {
       writeUpdateState({ ...state, pending: null });
       process.stdout.write(
-        `\n${chalk.red("Deep Code has been updated. Please restart the CLI to use the new version.")}\n\n`
+        `\n${chalk.red("doku has been updated. Please restart the CLI to use the new version.")}\n\n`
       );
     }
     return { installed: ok };
@@ -124,7 +124,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export function getUpdateStatePath(): string {
-  return path.join(os.homedir(), ".deepcode", UPDATE_STATE_FILE);
+  return path.join(os.homedir(), ".doku", UPDATE_STATE_FILE);
 }
 
 async function promptUpdateChoice({

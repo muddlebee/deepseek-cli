@@ -89,13 +89,13 @@ function normalizeEnv(env: DeepcodingSettings["env"]): Record<string, string> {
   return result;
 }
 
-export function collectDeepcodeEnv(processEnv: SettingsProcessEnv = process.env): Record<string, string> {
+export function collectDokuEnv(processEnv: SettingsProcessEnv = process.env): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(processEnv)) {
-    if (!key.startsWith("DEEPCODE_") || typeof value !== "string") {
+    if (!key.startsWith("DOKU_") || typeof value !== "string") {
       continue;
     }
-    const strippedKey = key.slice("DEEPCODE_".length);
+    const strippedKey = key.slice("DOKU_".length);
     if (strippedKey) {
       result[strippedKey] = value;
     }
@@ -175,7 +175,7 @@ export function resolveSettingsSources(
 ): ResolvedDeepcodingSettings {
   const userEnv = normalizeEnv(userSettings?.env);
   const projectEnv = normalizeEnv(projectSettings?.env);
-  const systemEnv = collectDeepcodeEnv(processEnv);
+  const systemEnv = collectDokuEnv(processEnv);
   const env = {
     ...userEnv,
     ...projectEnv,

@@ -96,7 +96,20 @@ type Props = {
   onToggleProcessStdout?: () => void;
 };
 
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+function KeyHint({ k, d }: { k: string; d: string }): React.ReactElement {
+  return (
+    <Box gap={1}>
+      <Text backgroundColor="#1e293b" color="#94a3b8">
+        {" "}
+        {k}{" "}
+      </Text>
+      <Text dimColor>{d}</Text>
+    </Box>
+  );
+}
+
+const SPINNER_FRAMES = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
+const SPINNER_COLORS = ["#0ea5e9", "#6366f1", "#8b5cf6", "#a855f7", "#8b5cf6", "#6366f1"];
 
 const PromptPrefixLine = React.memo(function PromptPrefixLine({ busy }: { busy: boolean }): React.ReactElement {
   const [spinnerIndex, setSpinnerIndex] = useState(0);
@@ -112,8 +125,11 @@ const PromptPrefixLine = React.memo(function PromptPrefixLine({ busy }: { busy: 
     return () => clearInterval(timer);
   }, [busy]);
 
-  const prefix = busy ? `${SPINNER_FRAMES[spinnerIndex]} ` : "> ";
-  return <Text color={busy ? "yellow" : "#229ac3"}>{prefix}</Text>;
+  const prefix = busy ? `${SPINNER_FRAMES[spinnerIndex]} ` : "❯ ";
+  const color = busy
+    ? (SPINNER_COLORS[spinnerIndex % SPINNER_COLORS.length] as Parameters<typeof Text>[0]["color"])
+    : "#0ea5e9";
+  return <Text color={color}>{prefix}</Text>;
 });
 
 export const PromptInput = React.memo(function PromptInput({
@@ -203,7 +219,7 @@ export const PromptInput = React.memo(function PromptInput({
       ? loadingText && loadingText.trim()
         ? `${loadingText}${processOrPasteHint}`
         : `esc to interrupt · ctrl+c to cancel input${processOrPasteHint}`
-      : `enter send · shift+enter newline · @ files · ctrl+v image · / commands · ctrl+d exit${processOrPasteHint}`;
+      : `enter send · shift+enter newline · @ files · ctrl+v image · / commands · ctrl+c exit${processOrPasteHint}`;
   useTerminalFocusReporting(stdout, !disabled);
   useTerminalExtendedKeys(stdout, !disabled);
   useBracketedPaste(stdout, !disabled);
@@ -315,16 +331,7 @@ export const PromptInput = React.memo(function PromptInput({
       if (key.ctrl && (input === "d" || input === "D")) {
         if (!isEmpty(buffer)) {
           updateBuffer((s) => deleteForward(s));
-          return;
         }
-        const now = Date.now();
-        if (pendingExit && now - lastCtrlDAt.current < 2000) {
-          exit();
-          return;
-        }
-        lastCtrlDAt.current = now;
-        setPendingExit(true);
-        setStatusMessage("press ctrl+d again to exit");
         return;
       }
 
@@ -338,12 +345,19 @@ export const PromptInput = React.memo(function PromptInput({
           pastesRef.current.clear();
           expandedRegionsRef.current.clear();
         } else {
-          setStatusMessage("press ctrl+d to exit");
+          const now = Date.now();
+          if (pendingExit && now - lastCtrlDAt.current < 2000) {
+            exit();
+            return;
+          }
+          lastCtrlDAt.current = now;
+          setPendingExit(true);
+          setStatusMessage("press ctrl+c again to exit");
         }
         return;
       }
 
-      if (pendingExit && (!key.ctrl || (input !== "d" && input !== "D"))) {
+      if (pendingExit && (!key.ctrl || (input !== "c" && input !== "C"))) {
         setPendingExit(false);
       }
 
@@ -857,14 +871,7 @@ export const PromptInput = React.memo(function PromptInput({
         </Box>
       ) : null}
       {/* Input */}
-      <Box
-        borderStyle="single"
-        borderTop={true}
-        borderBottom={true}
-        borderLeft={false}
-        borderRight={false}
-        borderDimColor
-      >
+      <Box borderStyle="round" borderColor={busy ? "#6366f1" : "#0ea5e9"} paddingX={1}>
         <PromptPrefixLine busy={busy} />
         <Text>{renderBufferWithCursor(buffer, !disabled && hasTerminalFocus, placeholder, pastesRef.current)}</Text>
         {inlineHint ? <Text dimColor>{inlineHint}</Text> : null}
@@ -904,11 +911,21 @@ export const PromptInput = React.memo(function PromptInput({
         onSelect={insertFileMentionSelection}
       />
       <SlashCommandMenu width={screenWidth} items={slashMenu} activeIndex={menuIndex} />
-      {!showFooterText && (
-        <Box>
-          <Text dimColor>{footerText}</Text>
-        </Box>
-      )}
+      {!showFooterText &&
+        (busy ? (
+          <Box paddingX={2} gap={2} marginTop={0}>
+            <Text color="#6366f1">{loadingText || "Thinking..."}</Text>
+            <Text dimColor>esc interrupt</Text>
+          </Box>
+        ) : (
+          <Box paddingX={2} gap={3}>
+            <KeyHint k="enter" d="send" />
+            <KeyHint k="/" d="commands" />
+            <KeyHint k="@" d="files" />
+            <KeyHint k="ctrl+v" d="image" />
+            <KeyHint k="ctrl+c" d="exit" />
+          </Box>
+        ))}
     </Box>
   );
 });

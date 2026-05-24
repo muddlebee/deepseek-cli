@@ -93,13 +93,13 @@ const FileMentionMenu: React.FC<Props> = ({ open, width, token, items, onClose, 
         description: item.type === "directory" ? "directory" : "file",
       }))}
       activeIndex={activeIndex}
-      activeColor="#229ac3"
+      activeColor="#0ea5e9"
       maxVisible={8}
       renderItem={(item, isActive) => (
         <Box flexDirection="row" paddingX={1} gap={1}>
-          <Text color={isActive ? "#229ac3" : undefined}>{isActive ? "> " : "  "}</Text>
+          <Text color={isActive ? "#0ea5e9" : undefined}>{isActive ? "> " : "  "}</Text>
           <Box flexGrow={1}>
-            <Text color={isActive ? "#229ac3" : undefined} wrap="truncate-end" bold={isActive}>
+            <Text color={isActive ? "#0ea5e9" : undefined} wrap="truncate-end" bold={isActive}>
               {item.label}
             </Text>
           </Box>

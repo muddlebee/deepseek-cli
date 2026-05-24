@@ -2,11 +2,12 @@ import React, { useMemo, useState } from "react";
 import { Box, Text } from "ink";
 import * as os from "node:os";
 import path from "node:path";
+import figlet from "figlet";
+import { Badge } from "@inkjs/ui";
 import type { SkillInfo } from "../session";
 import type { ResolvedDeepcodingSettings } from "../settings";
 import { buildSlashCommands, BUILTIN_SLASH_COMMANDS, formatSlashCommandDescription } from "./slashCommands";
 import { ThemedGradient } from "./ThemedGradient";
-import { AsciiLogo } from "../AsciiArt";
 import { useAppContext } from "./contexts";
 
 type WelcomeScreenProps = {
@@ -16,81 +17,51 @@ type WelcomeScreenProps = {
   width: number;
 };
 
-const TITLE_PANEL_WIDTH = 70;
-const PANEL_CONTENT_HEIGHT = 8;
-
 const SHORTCUT_TIPS = [
   { label: "Enter", description: "Send the prompt" },
   { label: "Shift+Enter", description: "Insert a newline" },
   { label: "Ctrl+V", description: "Paste an image from the clipboard" },
   { label: "Esc", description: "Interrupt the current model turn" },
   { label: "/", description: "Open the skills and commands menu" },
-  { label: "Ctrl+D twice", description: "Quit Deep Code CLI" },
+  { label: "Ctrl+D twice", description: "Quit" },
 ];
 
-export function WelcomeScreen({ projectRoot, settings, skills, width }: WelcomeScreenProps): React.ReactElement {
+const LOGO = figlet.textSync("doku", { font: "Slant" });
+
+export function WelcomeScreen({ projectRoot, settings, skills }: WelcomeScreenProps): React.ReactElement {
   const { version } = useAppContext();
   const tips = useMemo(() => buildWelcomeTips(skills), [skills]);
   const [tipIndex] = useState(() => randomTipIndex(tips.length));
-  const compact = width < TITLE_PANEL_WIDTH + 42;
   const cwd = formatHomeRelativePath(projectRoot);
   const tip = tips[Math.min(tipIndex, Math.max(0, tips.length - 1))] ?? tips[0];
-  const panelWidth = compact ? undefined : Math.min(width, 72);
+  const thinkingLabel = settings.thinkingEnabled ? `thinking ${settings.reasoningEffort}` : "no thinking";
 
   return (
-    <Box flexDirection="column" marginY={1}>
-      <Box flexDirection="column" width={panelWidth}>
-        <Box flexDirection="column" paddingX={1}>
-          <Box flexDirection="column" justifyContent="center" paddingX={1}>
-            <Box justifyContent="center" width={compact ? undefined : TITLE_PANEL_WIDTH}>
-              <ThemedGradient>{AsciiLogo}</ThemedGradient>
-            </Box>
-          </Box>
+    <Box flexDirection="column" paddingX={2} marginTop={1} marginBottom={1}>
+      {/* Compact figlet logo */}
+      <Box>
+        <ThemedGradient>{LOGO}</ThemedGradient>
+      </Box>
 
-          <Box
-            borderStyle={"round"}
-            borderColor={"#229ac3e6"}
-            flexDirection="column"
-            flexGrow={1}
-            height={compact ? undefined : PANEL_CONTENT_HEIGHT}
-            marginTop={compact ? 1 : 0}
-            paddingX={1}
-          >
-            <Box flexGrow={1} marginBottom={compact ? 1 : 0}>
-              <Text color={"#229ac3e6"}>{">"}_ Deep Code </Text>
-              <Text color="gray"> (v{version || "unknown"})</Text>
-            </Box>
-            {!compact ? <Text> </Text> : null}
-            <SettingRow label="Model" value={settings.model} />
-            <SettingRow label="Thinking Enabled" value={String(settings.thinkingEnabled)} />
-            <SettingRow label="Reasoning Effort" value={settings.thinkingEnabled ? settings.reasoningEffort : "-"} />
-            <SettingRow label="CWD" value={cwd} />
-          </Box>
+      {/* Version + settings — one line */}
+      <Box gap={2} marginTop={0} alignItems="center">
+        <Badge color="cyan">v{version || "unknown"}</Badge>
+        <Text color="magenta">{settings.model}</Text>
+        <Text dimColor>·</Text>
+        <Text color={settings.thinkingEnabled ? "green" : "gray"}>{thinkingLabel}</Text>
+        <Text dimColor>·</Text>
+        <Text dimColor>{cwd}</Text>
+      </Box>
+
+      {/* Tip */}
+      {tip ? (
+        <Box gap={1} marginTop={1}>
+          <Badge color="blue">TIP</Badge>
+          <Text dimColor>
+            {tip.label} — {tip.description}
+          </Text>
         </Box>
-      </Box>
-
-      <Box flexDirection="column" width={panelWidth} paddingX={1}>
-        {tip ? (
-          <Box marginTop={1}>
-            <Text dimColor>
-              Tips: {tip.label} - {tip.description}
-            </Text>
-          </Box>
-        ) : null}
-      </Box>
-    </Box>
-  );
-}
-
-function SettingRow({ label, value }: { label: string; value: string }): React.ReactElement {
-  return (
-    <Box flexDirection="row">
-      <Box width={20}>
-        <Text>{label}</Text>
-      </Box>
-      <Box flexGrow={1} justifyContent="flex-end">
-        <Text>{value}</Text>
-      </Box>
+      ) : null}
     </Box>
   );
 }

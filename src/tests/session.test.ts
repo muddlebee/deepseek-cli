@@ -225,7 +225,7 @@ test("SessionManager repairs legacy thinking tool calls missing reasoning conten
   assert.equal(Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"), false);
 });
 
-test("SessionManager replays normal assistant messages with reasoning content in thinking mode", () => {
+test("SessionManager replays normal assistant messages without reasoning content in thinking mode", () => {
   const manager = new SessionManager({
     projectRoot: process.cwd(),
     createOpenAIClient: () => ({
@@ -260,7 +260,9 @@ test("SessionManager replays normal assistant messages with reasoning content in
     reasoning_content?: string;
   }>;
 
-  assert.equal(thinkingMessages[0]?.reasoning_content, "");
+  // Per DeepSeek spec: reasoning_content must NOT be included for non-tool-call
+  // assistant messages — only tool-call assistant messages require it.
+  assert.equal(Object.prototype.hasOwnProperty.call(thinkingMessages[0] ?? {}, "reasoning_content"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"), false);
 });
 
@@ -270,7 +272,7 @@ test("SessionManager normalizes legacy sessions without activeTokens to zero", (
   setHomeDir(home);
 
   const projectCode = workspace.replace(/[\\/]/g, "-").replace(/:/g, "");
-  const projectDir = path.join(home, ".deepcode", "projects", projectCode);
+  const projectDir = path.join(home, ".doku", "projects", projectCode);
   fs.mkdirSync(projectDir, { recursive: true });
   fs.writeFileSync(
     path.join(projectDir, "sessions-index.json"),
@@ -323,7 +325,7 @@ test("SessionManager marks skills loaded from existing session messages", async 
   );
 
   const projectCode = workspace.replace(/[\\/]/g, "-").replace(/:/g, "");
-  const projectDir = path.join(home, ".deepcode", "projects", projectCode);
+  const projectDir = path.join(home, ".doku", "projects", projectCode);
   fs.mkdirSync(projectDir, { recursive: true });
   fs.writeFileSync(
     path.join(projectDir, "loaded-session.jsonl"),
@@ -369,7 +371,7 @@ test("SessionManager lists project skills from .agents with legacy .deepcode com
     "utf8"
   );
 
-  const legacyProjectSkillDir = path.join(workspace, ".deepcode", "skills", "legacy");
+  const legacyProjectSkillDir = path.join(workspace, ".doku", "skills", "legacy");
   fs.mkdirSync(legacyProjectSkillDir, { recursive: true });
   fs.writeFileSync(
     path.join(legacyProjectSkillDir, "SKILL.md"),
@@ -390,7 +392,7 @@ test("SessionManager lists project skills from .agents with legacy .deepcode com
   const legacySkill = skills.find((skill) => skill.name === "legacy");
   const sharedSkill = skills.find((skill) => skill.name === "shared");
 
-  assert.equal(legacySkill?.path, "./.deepcode/skills/legacy/SKILL.md");
+  assert.equal(legacySkill?.path, "./.doku/skills/legacy/SKILL.md");
   assert.equal(legacySkill?.description, "Legacy project skill");
   assert.equal(sharedSkill?.path, "./.agents/skills/shared/SKILL.md");
   assert.equal(sharedSkill?.description, "Project .agents skill");
@@ -639,8 +641,8 @@ test("createSession stores /init and sends the active .deepcode project AGENTS p
   setHomeDir(home);
   globalThis.fetch = (async () => ({ ok: true, text: async () => "" }) as Response) as typeof fetch;
 
-  fs.mkdirSync(path.join(workspace, ".deepcode"), { recursive: true });
-  fs.writeFileSync(path.join(workspace, ".deepcode", "AGENTS.md"), "deepcode project instructions", "utf8");
+  fs.mkdirSync(path.join(workspace, ".doku"), { recursive: true });
+  fs.writeFileSync(path.join(workspace, ".doku", "AGENTS.md"), "deepcode project instructions", "utf8");
   fs.writeFileSync(path.join(workspace, "AGENTS.md"), "root project instructions", "utf8");
 
   const manager = createSessionManager(workspace, "machine-id-init-deepcode");
@@ -685,13 +687,13 @@ test("createSession appends default system prompts in prefix-cache-friendly orde
   assert.equal(systemContents.length >= 4, true);
   assert.match(systemContents[0] ?? "", /# Available Tools/);
   assert.doesNotMatch(systemContents[0] ?? "", /# Local Workspace Environment/);
-  assert.doesNotMatch(systemContents[0] ?? "", /当前LLM模型为test-model/);
+  assert.doesNotMatch(systemContents[0] ?? "", /The current LLM model is test-model/);
   assert.match(systemContents[1] ?? "", /<agent-drift-guard-skill>/);
   assert.match(systemContents[1] ?? "", /<plan-and-execute-skill>/);
   assert.doesNotMatch(systemContents[1] ?? "", /path="templates\/skills\//);
-  assert.doesNotMatch(systemContents[1] ?? "", /当前LLM模型为test-model/);
+  assert.doesNotMatch(systemContents[1] ?? "", /The current LLM model is test-model/);
   assert.match(systemContents[2] ?? "", /# Local Workspace Environment/);
-  assert.match(systemContents[2] ?? "", /当前LLM模型为test-model/);
+  assert.match(systemContents[2] ?? "", /The current LLM model is test-model/);
   const environmentJsonMatch = (systemContents[2] ?? "").match(/```json\n([\s\S]+?)\n```/);
   assert.ok(environmentJsonMatch);
   const environmentInfo = JSON.parse(environmentJsonMatch[1] ?? "{}") as { "root path"?: string };
@@ -732,8 +734,8 @@ test("createSession stores /init and sends generate prompt when no project AGENT
   setHomeDir(home);
   globalThis.fetch = (async () => ({ ok: true, text: async () => "" }) as Response) as typeof fetch;
 
-  fs.mkdirSync(path.join(home, ".deepcode"), { recursive: true });
-  fs.writeFileSync(path.join(home, ".deepcode", "AGENTS.md"), "user instructions", "utf8");
+  fs.mkdirSync(path.join(home, ".doku"), { recursive: true });
+  fs.writeFileSync(path.join(home, ".doku", "AGENTS.md"), "user instructions", "utf8");
 
   const manager = createSessionManager(workspace, "machine-id-init-generate");
   (manager as any).activateSession = async () => {};
@@ -778,7 +780,7 @@ test("createSession reports a new prompt with the machineId token", async () => 
   assert.equal(activatedSessionIds.length, 1);
   assert.equal(activatedSessionIds[0], sessionId);
   assert.equal(fetchCalls.length, 1);
-  assert.equal(String(fetchCalls[0].input), "https://deepcode.vegamo.cn/api/plugin/new");
+  assert.equal(String(fetchCalls[0].input), "https://github.com/muddlebee/deepseek-cli/api/plugin/new");
   assert.equal(fetchCalls[0].init?.method, "POST");
   assert.ok(fetchCalls[0].init?.signal instanceof AbortSignal);
   assert.deepEqual(JSON.parse(String(fetchCalls[0].init?.body)), {});
@@ -810,7 +812,7 @@ test("replySession reports a new prompt with the machineId token", async () => {
   await flushPromises();
 
   assert.equal(fetchCalls.length, 1);
-  assert.equal(String(fetchCalls[0].input), "https://deepcode.vegamo.cn/api/plugin/new");
+  assert.equal(String(fetchCalls[0].input), "https://github.com/muddlebee/deepseek-cli/api/plugin/new");
   assert.equal(fetchCalls[0].init?.method, "POST");
   assert.ok(fetchCalls[0].init?.signal instanceof AbortSignal);
   assert.deepEqual(JSON.parse(String(fetchCalls[0].init?.body)), {});
@@ -982,7 +984,7 @@ test("createSession initializes file-history repo and session branch", async (t)
   const userMessage = manager.listSessionMessages(sessionId).find((message) => message.role === "user");
   const gitDir = path.join(
     home,
-    ".deepcode",
+    ".doku",
     "projects",
     workspace.replace(/[\\/]/g, "-").replace(/:/g, ""),
     "file-history",
@@ -2194,7 +2196,7 @@ function createFileHistoryCommit(
   files: Record<string, string>
 ): string {
   const projectCode = workspace.replace(/[\\/]/g, "-").replace(/:/g, "");
-  const gitDir = path.join(home, ".deepcode", "projects", projectCode, "file-history", ".git");
+  const gitDir = path.join(home, ".doku", "projects", projectCode, "file-history", ".git");
   const fileHistory = new GitFileHistory(workspace, gitDir);
   fileHistory.ensureSession(sessionId);
 

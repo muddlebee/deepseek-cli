@@ -122,9 +122,9 @@ export function UndoSelector({ targets, onSelect, onCancel }: Props): React.Reac
               const isActive = actualIndex === safeTargetIndex;
               return (
                 <Box key={target.message.id} height={2} marginBottom={1}>
-                  <Text color="#229ac3">{isActive ? "> " : "  "}</Text>
+                  <Text color="#0ea5e9">{isActive ? "> " : "  "}</Text>
                   <Box flexDirection="column" flexGrow={1}>
-                    <Text color={isActive ? "#229ac3" : undefined} bold={isActive}>
+                    <Text color={isActive ? "#0ea5e9" : undefined} bold={isActive}>
                       {formatUndoMessage(target.message.content)}
                     </Text>
                     <Text dimColor>

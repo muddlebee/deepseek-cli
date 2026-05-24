@@ -3,9 +3,9 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 
-const FILE_HISTORY_AUTHOR_NAME = "DeepCode Checkpoint";
-const FILE_HISTORY_AUTHOR_EMAIL = "deepcode-checkpoint@localhost";
-const MANIFEST_PATH = ".deepcode-file-history.json";
+const FILE_HISTORY_AUTHOR_NAME = "doku checkpoint";
+const FILE_HISTORY_AUTHOR_EMAIL = "doku-checkpoint@localhost";
+const MANIFEST_PATH = ".doku-file-history.json";
 
 type FileHistoryEntry = {
   path: string;

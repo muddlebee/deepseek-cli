@@ -5,8 +5,8 @@ type ThinkingConfig = {
 };
 
 type ThinkingRequestOptions = {
-  thinking?: ThinkingConfig;
-  extra_body?: {
+  extra_body: {
+    thinking: ThinkingConfig;
     reasoning_effort?: ReasoningEffort;
   };
 };
@@ -16,10 +16,10 @@ export function buildThinkingRequestOptions(
   _baseURL?: string,
   reasoningEffort: ReasoningEffort = "max"
 ): ThinkingRequestOptions {
-  const thinking: ThinkingConfig = { type: thinkingEnabled ? "enabled" : "disabled" };
-
   return {
-    thinking,
-    ...(thinkingEnabled ? { extra_body: { reasoning_effort: reasoningEffort } } : {}),
+    extra_body: {
+      thinking: { type: thinkingEnabled ? "enabled" : "disabled" },
+      ...(thinkingEnabled ? { reasoning_effort: reasoningEffort } : {}),
+    },
   };
 }

@@ -178,7 +178,7 @@ export function SessionList({ sessions, onSelect, onCancel }: Props): React.Reac
             <Text bold color="cyanBright">
               Resume a session
             </Text>
-            <Text bold color="#229ac3">
+            <Text bold color="#0ea5e9">
               {" "}
               ({sessions.length} total
               {hasActiveSearch ? `, ${filteredSessions.length} matched` : ""})
@@ -214,13 +214,13 @@ export function SessionList({ sessions, onSelect, onCancel }: Props): React.Reac
               return (
                 <Box key={session.id} height={2} marginBottom={1}>
                   <Box>
-                    <Text color="#229ac3">{actualIndex === safeIndex ? "> " : "  "}</Text>
+                    <Text color="#0ea5e9">{actualIndex === safeIndex ? "> " : "  "}</Text>
                   </Box>
                   <Box flexDirection="column" flexGrow={1}>
                     <Box width={"100%"}>
                       <Text
                         {...(actualIndex === safeIndex ? { bold: true } : {})}
-                        color={actualIndex === safeIndex ? "#229ac3" : undefined}
+                        color={actualIndex === safeIndex ? "#0ea5e9" : undefined}
                       >
                         {formatSessionTitle(session.summary || "Untitled")}
                       </Text>

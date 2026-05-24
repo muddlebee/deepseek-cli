@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Static, Text, useApp, useStdout, useWindowSize } from "ink";
+import { StatusMessage } from "@inkjs/ui";
 import chalk from "chalk";
 import * as fs from "fs";
 import * as os from "os";
@@ -635,13 +636,13 @@ export function App({ projectRoot, initialPrompt, onRestart }: AppProps): React.
         }}
       </Static>
       {statusLine ? (
-        <Box>
+        <Box marginLeft={1}>
           <Text dimColor>{statusLine}</Text>
         </Box>
       ) : null}
       {errorLine ? (
-        <Box>
-          <Text color="red">Error: {errorLine}</Text>
+        <Box marginLeft={1}>
+          <StatusMessage variant="error">{errorLine}</StatusMessage>
         </Box>
       ) : null}
       {showProcessStdout ? (
@@ -848,11 +849,11 @@ export function resolveCurrentSettings(projectRoot: string = process.cwd()): Res
 export { createOpenAIClient } from "../common/openai-client";
 
 function getUserSettingsPath(): string {
-  return path.join(os.homedir(), ".deepcode", "settings.json");
+  return path.join(os.homedir(), ".doku", "settings.json");
 }
 
 function getProjectSettingsPath(projectRoot: string): string {
-  return path.join(projectRoot, ".deepcode", "settings.json");
+  return path.join(projectRoot, ".doku", "settings.json");
 }
 
 function formatThinkingMode(settings: Pick<ModelConfigSelection, "thinkingEnabled" | "reasoningEffort">): string {

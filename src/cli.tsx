@@ -15,21 +15,21 @@ if (args.includes("--version") || args.includes("-v")) {
 if (args.includes("--help") || args.includes("-h")) {
   process.stdout.write(
     [
-      "deepcode - Deep Code CLI",
+      "doku — DeepSeek AI coding assistant",
       "",
       "Usage:",
-      "  deepcode                              Launch the interactive TUI in the current directory",
-      "  deepcode -p <prompt>                  Launch with a pre-filled prompt",
-      "  deepcode --prompt <prompt>            Same as -p",
-      "  deepcode --version                    Print the version",
-      "  deepcode --help                       Show this help",
+      "  doku                              Launch the interactive TUI in the current directory",
+      "  doku -p <prompt>                  Launch with a pre-filled prompt",
+      "  doku --prompt <prompt>            Same as -p",
+      "  doku --version                    Print the version",
+      "  doku --help                       Show this help",
       "",
       "Configuration:",
-      "  ~/.deepcode/settings.json    User-level API key, model, base URL",
-      "  ./.deepcode/settings.json    Project-level settings",
+      "  ~/.doku/settings.json    User-level API key, model, base URL",
+      "  ./.doku/settings.json    Project-level settings",
       "  ~/.agents/skills/*/SKILL.md  User-level skills",
       "  ./.agents/skills/*/SKILL.md  Project-level skills",
-      "  ./.deepcode/skills/*/SKILL.md Legacy project-level skills",
+      "  ./.doku/skills/*/SKILL.md Legacy project-level skills",
       "",
       "Inside the TUI:",
       "  enter            Send the prompt",
@@ -51,7 +51,7 @@ if (args.includes("--help") || args.includes("-h")) {
       "  /mcp             Show MCP server status and available tools",
       "  /raw             Toggle display mode for viewing or collapsing reasoning content",
       "  /exit            Quit",
-      "  ctrl+d twice     Quit",
+      "  ctrl+c twice     Quit",
     ].join("\n") + "\n"
   );
   process.exit(0);
@@ -70,7 +70,7 @@ const projectRoot = process.cwd();
 configureWindowsShell();
 
 if (!process.stdin.isTTY) {
-  process.stderr.write("deepcode requires an interactive terminal (TTY). " + "Re-run from a real terminal session.\n");
+  process.stderr.write("doku requires an interactive terminal (TTY). " + "Re-run from a real terminal session.\n");
   process.exit(1);
 }
 
@@ -123,7 +123,7 @@ function configureWindowsShell(): void {
     setShellIfWindows();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`deepcode: ${message}\n`);
+    process.stderr.write(`doku: ${message}\n`);
     process.exit(1);
   }
 }
@@ -132,10 +132,10 @@ function readPackageInfo(): PackageInfo {
   try {
     const pkg = require("../package.json") as { name?: unknown; version?: unknown };
     return {
-      name: typeof pkg.name === "string" ? pkg.name : "@vegamo/deepcode-cli",
+      name: typeof pkg.name === "string" ? pkg.name : "deepseek-cli",
       version: typeof pkg.version === "string" ? pkg.version : "",
     };
   } catch {
-    return { name: "@vegamo/deepcode-cli", version: "" };
+    return { name: "deepseek-cli", version: "" };
   }
 }

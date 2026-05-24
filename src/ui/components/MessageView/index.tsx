@@ -23,12 +23,12 @@ export function MessageView({ message, collapsed, width = 80 }: MessageViewProps
     return (
       <Box marginLeft={1} marginBottom={1} flexDirection="row" marginY={0} flexGrow={1} gap={1}>
         <Box>
-          <Text color="#229ac3">{`>`}</Text>
+          <Text color="#0ea5e9">❯</Text>
         </Box>
         <Box flexGrow={1}>
-          <Text color="#229ac3">{text}</Text>
+          <Text color="#0ea5e9">{text}</Text>
           {Array.isArray(message.contentParams) && message.contentParams.length > 0 ? (
-            <Text color="#229ac3">{`  📎 ${message.contentParams.length} image attachment(s)`}</Text>
+            <Text color="#0ea5e9">{`  📎 ${message.contentParams.length} image attachment(s)`}</Text>
           ) : null}
         </Box>
       </Box>
@@ -64,7 +64,7 @@ export function MessageView({ message, collapsed, width = 80 }: MessageViewProps
     return (
       <Box marginLeft={1} marginBottom={1} width={containerWidth} gap={1} marginY={0} flexDirection="row">
         <Box alignSelf="stretch">
-          <Text color="#229ac3">✦</Text>
+          <Text color="#0ea5e9">✦</Text>
         </Box>
         <Box flexGrow={1} width={contentWidth}>
           {content ? <Text wrap="wrap">{renderMarkdown(content)}</Text> : null}
@@ -97,10 +97,10 @@ export function MessageView({ message, collapsed, width = 80 }: MessageViewProps
       return (
         <Box marginY={0} marginLeft={1} marginBottom={1} flexGrow={1} flexDirection="row" gap={1}>
           <Box>
-            <Text color="#229ac3">{`>`}</Text>
+            <Text color="#0ea5e9">❯</Text>
           </Box>
           <Box flexGrow={1} flexDirection="column">
-            <Text color="#229ac3">{message.content}</Text>
+            <Text color="#0ea5e9">{message.content}</Text>
           </Box>
         </Box>
       );
@@ -128,6 +128,12 @@ export function MessageView({ message, collapsed, width = 80 }: MessageViewProps
   return null;
 }
 
+const STATUS_BULLET: Record<"gray" | "green" | "red", string> = {
+  gray: "◎",
+  green: "◆",
+  red: "◆",
+};
+
 function StatusLine({
   bulletColor,
   name,
@@ -146,7 +152,7 @@ function StatusLine({
     <Box gap={1} width={containerWidth}>
       <Box alignSelf="stretch">
         <Text key="bullet" color={bulletColor}>
-          ✧
+          {STATUS_BULLET[bulletColor]}
         </Text>
       </Box>
       <Box flexGrow={1} width={contentWidth} gap={1}>

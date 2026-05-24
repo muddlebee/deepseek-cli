@@ -90,9 +90,9 @@ Here's an example of how your output should be structured:
 
 </summary>`;
 
-const SYSTEM_PROMPT_BASE = `你是名叫Deep Code的交互式CLI工具，帮助用户完成软件工程任务。 Use the instructions below and the tools available to you to assist the user.
+const SYSTEM_PROMPT_BASE = `You are doku, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.
 
-重要：严禁编造任何非编程相关的 URL。对于编程链接，仅限使用：1) 用户提供的上下文；2) 你确定的官方文档主域名。在输出前，必须自查该链接是否存在于你的上下文记忆中；若不存在，请明确说明无法提供。`;
+IMPORTANT: Never fabricate URLs unrelated to programming. For programming links, only use: 1) context provided by the user; 2) official documentation domains you are certain about. Before outputting a link, verify it exists in your context memory; if it does not, explicitly state that you cannot provide it.`;
 
 type PromptToolOptions = {
   model?: string;
@@ -159,8 +159,10 @@ ${skill.content}
 
 function getCurrentDateAndModelPrompt(model?: string): string {
   const date = new Date();
-  let prompt = `今天是${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日。随着对话的进行，时间在流逝。`;
-  prompt += model ? `\n当前LLM模型为${model}，对话中可通过/model命令切换模型。` : "";
+  let prompt = `Today is ${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}. Time passes as the conversation continues.`;
+  prompt += model
+    ? `\nThe current LLM model is ${model}. You can switch models during the conversation with the /model command.`
+    : "";
   return prompt;
 }
 
@@ -522,6 +524,73 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
           },
         },
         required: ["query"],
+        additionalProperties: false,
+      },
+    },
+  });
+
+  tools.push({
+    type: "function",
+    function: {
+      name: "Grep",
+      description:
+        "Search file contents with ripgrep. Returns structured JSON with file paths, line numbers, and matched text. Prefer this over bash rg/grep for all code search operations.",
+      parameters: {
+        type: "object",
+        properties: {
+          pattern: {
+            type: "string",
+            description: "Regex or literal string to search for.",
+          },
+          path: {
+            type: "string",
+            description: "Directory or file to search. Defaults to the project root.",
+          },
+          include: {
+            type: "string",
+            description: 'Glob to filter files (e.g. "*.ts", "src/**/*.py").',
+          },
+          case_sensitive: {
+            type: "boolean",
+            description: "Match case-sensitively. Default false.",
+          },
+          context_lines: {
+            type: "number",
+            description: "Lines to include before and after each match (0–10). Default 0.",
+          },
+        },
+        required: ["pattern"],
+        additionalProperties: false,
+      },
+    },
+  });
+
+  tools.push({
+    type: "function",
+    function: {
+      name: "ListFiles",
+      description:
+        "List files and directories at a path. Returns structured JSON with separate file/dir arrays. Prefer this over bash ls/find for directory exploration.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Directory to list. Defaults to the project root.",
+          },
+          pattern: {
+            type: "string",
+            description: 'Glob to filter entries by name (e.g. "*.ts", "*.test.*").',
+          },
+          recursive: {
+            type: "boolean",
+            description: "Walk subdirectories. Default true.",
+          },
+          max_depth: {
+            type: "number",
+            description: "Maximum depth when recursive (default 5, max 20).",
+          },
+        },
         additionalProperties: false,
       },
     },

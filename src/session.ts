@@ -31,10 +31,12 @@ import { killProcessTree } from "./common/process-tree";
 import { GitFileHistory } from "./common/file-history";
 
 const MAX_SESSION_ENTRIES = 50;
-const DEFAULT_NEW_PROMPT_API_URL = "https://deepcode.vegamo.cn/api/plugin/new";
+const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/deepseek-cli/api/plugin/new";
 const NEW_PROMPT_REPORT_TIMEOUT_MS = 3000;
 const DEFAULT_COMPACT_PROMPT_TOKEN_THRESHOLD = 128 * 1024;
-const DEEPSEEK_V4_COMPACT_PROMPT_TOKEN_THRESHOLD = 512 * 1024;
+// Both deepseek-v4-flash and deepseek-v4-pro have a 1M token context window.
+// Compact at 800k to leave headroom for the model's 384k max output.
+const DEEPSEEK_V4_COMPACT_PROMPT_TOKEN_THRESHOLD = 800 * 1024;
 
 type ChatCompletionDebugOptions = {
   enabled?: boolean;
@@ -687,7 +689,7 @@ The candidate skills are as follows:\n\n`;
   async listSkills(sessionId?: string): Promise<SkillInfo[]> {
     const homeDir = os.homedir();
     const agentsRoot = path.join(homeDir, ".agents", "skills");
-    const legacyProjectSkillsRoot = path.join(this.projectRoot, ".deepcode", "skills");
+    const legacyProjectSkillsRoot = path.join(this.projectRoot, ".doku", "skills");
     const projectAgentsSkillsRoot = path.join(this.projectRoot, ".agents", "skills");
     const skillsByName = new Map<string, SkillInfo>();
 
@@ -728,7 +730,7 @@ The candidate skills are as follows:\n\n`;
     for (const skill of collectSkills(agentsRoot, "~/.agents/skills")) {
       skillsByName.set(skill.name, skill);
     }
-    for (const skill of collectSkills(legacyProjectSkillsRoot, "./.deepcode/skills")) {
+    for (const skill of collectSkills(legacyProjectSkillsRoot, "./.doku/skills")) {
       skillsByName.set(skill.name, skill);
     }
     for (const skill of collectSkills(projectAgentsSkillsRoot, "./.agents/skills")) {
@@ -1086,7 +1088,7 @@ ${skillMd}
       this.onAssistantMessage(
         this.buildAssistantMessage(
           sessionId,
-          "OpenAI API key not found. Please configure ~/.deepcode/settings.json or ./.deepcode/settings.json.",
+          "OpenAI API key not found. Please configure ~/.doku/settings.json or ./.doku/settings.json.",
           null
         ),
         false
@@ -1585,7 +1587,7 @@ ${skillMd}
     sessionsIndexPath: string;
   } {
     const projectCode = this.getProjectCode(this.projectRoot);
-    const projectDir = path.join(os.homedir(), ".deepcode", "projects", projectCode);
+    const projectDir = path.join(os.homedir(), ".doku", "projects", projectCode);
     const sessionsIndexPath = path.join(projectDir, "sessions-index.json");
     return { projectCode, projectDir, sessionsIndexPath };
   }
@@ -1787,8 +1789,8 @@ ${skillMd}
   private loadProjectAgentInstructions(): { content: string; displayPath: string } | null {
     const candidatePaths = [
       {
-        absolutePath: path.join(this.projectRoot, ".deepcode", "AGENTS.md"),
-        displayPath: "./.deepcode/AGENTS.md",
+        absolutePath: path.join(this.projectRoot, ".doku", "AGENTS.md"),
+        displayPath: "./.doku/AGENTS.md",
       },
       {
         absolutePath: path.join(this.projectRoot, "AGENTS.md"),
@@ -1827,7 +1829,7 @@ ${skillMd}
       return projectInstructions.content;
     }
 
-    return this.readNonEmptyFile(path.join(os.homedir(), ".deepcode", "AGENTS.md"));
+    return this.readNonEmptyFile(path.join(os.homedir(), ".doku", "AGENTS.md"));
   }
 
   private buildSystemMessage(
@@ -2063,9 +2065,11 @@ ${skillMd}
     }
     if (typeof messageParams?.reasoning_content === "string") {
       (base as { reasoning_content?: string }).reasoning_content = messageParams.reasoning_content;
-    } else if (thinkingEnabled && message.role === "assistant") {
-      // Thinking-mode providers require every replayed assistant message
-      // to include the reasoning_content field, even when it is empty.
+    } else if (thinkingEnabled && message.role === "assistant" && messageParams?.tool_calls) {
+      // Per DeepSeek spec: reasoning_content must accompany tool_calls in replayed
+      // assistant messages even when the model produced no reasoning text. For
+      // non-tool-call assistant messages, omitting the field is correct — including
+      // it (even empty) on those messages violates the spec and causes 400 errors.
       (base as { reasoning_content?: string }).reasoning_content = "";
     }
 
