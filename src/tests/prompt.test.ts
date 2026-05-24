@@ -35,8 +35,13 @@ test("getSystemPrompt includes compact workflow skill guidance without full skil
   assert.equal(prompt.includes("# Operating Principles"), true);
   assert.equal(prompt.includes("Keep execution aligned with the user's request and explicit constraints."), true);
   assert.equal(prompt.includes("# Built-in Workflow Skills"), true);
-  assert.equal(prompt.includes("/debug: debugging-and-error-recovery"), true);
-  assert.equal(prompt.includes("/review: code-review-and-quality"), true);
+  assert.equal(prompt.includes("/debug: Debug failures systematically and recover from errors."), true);
+  assert.equal(
+    prompt.includes(
+      "/review: Review changes across correctness, readability, architecture, security, and performance."
+    ),
+    true
+  );
   assert.equal(prompt.includes("## The Stop-the-Line Rule"), false);
 });
 

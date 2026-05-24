@@ -4,7 +4,7 @@ import { buildThinkingRequestOptions } from "../common/openai-thinking";
 import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
 import {
   buildDiffPreview,
-  hasFileChangedSinceState,
+  hasFileChangedAgainstMetadata,
   readTextFileWithMetadata,
   writeTextFile,
 } from "../common/file-utils";
@@ -196,23 +196,23 @@ export async function handleEditTool(
         };
       }
 
-      if (hasFileChangedSinceState(filePath, fileState)) {
-        return {
-          ok: false,
-          name: "edit",
-          error: "File has been modified since read. Read it again before editing.",
-        };
-      }
-
       try {
         const metadata = readTextFileWithMetadata(filePath);
+        if (hasFileChangedAgainstMetadata(metadata, fileState)) {
+          return {
+            ok: false,
+            name: "edit",
+            error: "File has been modified since read. Read it again before editing.",
+          };
+        }
+
         const raw = metadata.content;
         const oldString = input.old_string;
         const newString = input.new_string;
         const replaceAll = input.replace_all ?? false;
         const lineIndex = buildLineIndex(raw);
         const scope = buildSearchScope(filePath, raw, lineIndex, snippet ?? null);
-        let matches = findOccurrences(raw, oldString, scope);
+        let matches = findOccurrences(raw, oldString, scope, lineIndex);
         let matchedVia: "exact" | "line_leading_tab_correction" | "loose_escape" | "llm_escape_correction" = "exact";
         let replacementOldString = oldString;
         let replacementNewString = newString;
@@ -220,7 +220,7 @@ export async function handleEditTool(
         if (matches.length === 0) {
           const tabStrippedOldString = stripReadResultLineTabs(oldString);
           if (tabStrippedOldString !== oldString) {
-            const tabStrippedMatches = findOccurrences(raw, tabStrippedOldString, scope);
+            const tabStrippedMatches = findOccurrences(raw, tabStrippedOldString, scope, lineIndex);
             if (tabStrippedMatches.length === 1) {
               matches = tabStrippedMatches;
               matchedVia = "line_leading_tab_correction";
@@ -231,7 +231,7 @@ export async function handleEditTool(
         }
 
         if (matches.length === 0) {
-          const looseEscapeMatches = findLooseEscapeMatches(raw, oldString, scope);
+          const looseEscapeMatches = findLooseEscapeMatches(raw, oldString, scope, lineIndex);
           if (looseEscapeMatches.length === 1 && looseEscapeMatches[0]?.score === 1) {
             const correctedStrings = await correctEscapedStringsWithLLM(
               raw.slice(scope.startOffset, scope.endOffset),
@@ -242,7 +242,7 @@ export async function handleEditTool(
             );
 
             if (correctedStrings) {
-              const correctedMatches = findOccurrences(raw, correctedStrings.oldString, scope);
+              const correctedMatches = findOccurrences(raw, correctedStrings.oldString, scope, lineIndex);
               if (correctedMatches.length > 0) {
                 matches = correctedMatches;
                 matchedVia = "llm_escape_correction";
@@ -431,7 +431,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function findOccurrences(raw: string, needle: string, scope: SearchScope): MatchOccurrence[] {
+function findOccurrences(raw: string, needle: string, scope: SearchScope, lineIndex: LineIndex): MatchOccurrence[] {
   if (!raw || !needle) {
     return [];
   }
@@ -450,8 +450,8 @@ function findOccurrences(raw: string, needle: string, scope: SearchScope): Match
     matches.push({
       startOffset,
       endOffset,
-      startLine: offsetToLine(raw, startOffset),
-      endLine: offsetToLine(raw, Math.max(startOffset, endOffset - 1)),
+      startLine: offsetToLine(lineIndex, startOffset),
+      endLine: offsetToLine(lineIndex, Math.max(startOffset, endOffset - 1)),
     });
     searchIndex = found + needle.length;
   }
@@ -459,7 +459,12 @@ function findOccurrences(raw: string, needle: string, scope: SearchScope): Match
   return matches;
 }
 
-function findLooseEscapeMatches(raw: string, needle: string, scope: SearchScope): LooseEscapeMatch[] {
+function findLooseEscapeMatches(
+  raw: string,
+  needle: string,
+  scope: SearchScope,
+  lineIndex: LineIndex
+): LooseEscapeMatch[] {
   if (!raw || !needle) {
     return [];
   }
@@ -485,25 +490,38 @@ function findLooseEscapeMatches(raw: string, needle: string, scope: SearchScope)
       score: similarityScore(normalizedNeedle, normalizeLooseText(text)),
       startOffset,
       endOffset,
-      startLine: offsetToLine(raw, startOffset),
-      endLine: offsetToLine(raw, Math.max(startOffset, endOffset - 1)),
+      startLine: offsetToLine(lineIndex, startOffset),
+      endLine: offsetToLine(lineIndex, Math.max(startOffset, endOffset - 1)),
     });
   }
 
   return matches;
 }
 
-function offsetToLine(raw: string, offset: number): number {
+function offsetToLine(lineIndex: LineIndex, offset: number): number {
   if (offset <= 0) {
     return 1;
   }
-  let line = 1;
-  for (let index = 0; index < raw.length && index < offset; index += 1) {
-    if (raw[index] === "\n") {
-      line += 1;
+
+  const lineStarts = lineIndex.lineStarts;
+  let low = 1;
+  let high = lineStarts.length - 2;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const startOffset = lineStarts[mid];
+    const nextStartOffset = lineStarts[mid + 1];
+    if (offset >= startOffset && offset < nextStartOffset) {
+      return mid;
+    }
+    if (offset < startOffset) {
+      high = mid - 1;
+    } else {
+      low = mid + 1;
     }
   }
-  return line;
+
+  return Math.max(1, Math.min(lineStarts.length - 2, high));
 }
 
 function validateReplaceAllGuard(input: {
@@ -625,7 +643,7 @@ function findClosestMatch(
   scope: SearchScope,
   lineIndex: LineIndex
 ): ClosestMatch | null {
-  const looseEscapeMatches = findLooseEscapeMatches(raw, oldString, scope);
+  const looseEscapeMatches = findLooseEscapeMatches(raw, oldString, scope, lineIndex);
   if (looseEscapeMatches.length > 0) {
     let bestLooseMatch: ClosestMatch | null = null;
     for (const match of looseEscapeMatches) {

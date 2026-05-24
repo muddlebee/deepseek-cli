@@ -59,6 +59,8 @@ export type ToolExecutionHooks = {
   onAfterFileMutation?: (filePath: string) => void;
   onNeedsWebSearchSetup?: () => void;
   shouldStop?: () => boolean;
+  bashTimeoutMs?: number;
+  bashMinTimeoutMs?: number;
 };
 
 export type ProcessTimeoutInfo = {
@@ -101,6 +103,10 @@ const BUILT_IN_TOOL_NAME_ALIASES = new Map<string, string>([
   ["Edit", "edit"],
 ]);
 
+const BLOCKING_TOOL_NAMES = new Set(["AskUserQuestion"]);
+const SERIAL_TOOL_NAMES = new Set(["bash", "write", "edit"]);
+const PARALLEL_SAFE_TOOL_NAMES = new Set(["read", "Grep", "ListFiles", "WebSearch", "UpdatePlan"]);
+
 export type ToolCallExecution = {
   toolCallId: string;
   content: string;
@@ -129,28 +135,100 @@ export class ToolExecutor {
       .map((toolCall) => this.parseToolCall(toolCall))
       .filter((toolCall): toolCall is ToolCall => Boolean(toolCall));
 
+    if (parsedCalls.length === 0) {
+      return [];
+    }
+
     // AskUserQuestion blocks on user input — the whole batch must run
     // sequentially so the UI can pause and wait for the response before
     // processing any subsequent tool calls.
-    const hasBlockingTool = parsedCalls.some((tc) => tc.function.name === "AskUserQuestion");
-
+    const hasBlockingTool = parsedCalls.some((tc) => BLOCKING_TOOL_NAMES.has(tc.function.name));
     if (hasBlockingTool) {
-      const executions: ToolCallExecution[] = [];
-      for (const toolCall of parsedCalls) {
-        if (hooks?.shouldStop?.()) break;
-        const result = await this.executeToolCall(sessionId, toolCall, hooks);
-        executions.push({ toolCallId: toolCall.id, content: this.formatToolResult(result), result });
-        if (hooks?.shouldStop?.()) break;
-      }
-      return executions;
+      return this.executeSequentialToolCalls(sessionId, parsedCalls, hooks);
     }
 
-    return Promise.all(
-      parsedCalls.map(async (toolCall) => {
-        const result = await this.executeToolCall(sessionId, toolCall, hooks);
-        return { toolCallId: toolCall.id, content: this.formatToolResult(result), result };
-      })
-    );
+    return this.executeScheduledToolCalls(sessionId, parsedCalls, hooks);
+  }
+
+  private async executeScheduledToolCalls(
+    sessionId: string,
+    parsedCalls: ToolCall[],
+    hooks?: ToolExecutionHooks
+  ): Promise<ToolCallExecution[]> {
+    const executionsByIndex = new Array<ToolCallExecution | null>(parsedCalls.length).fill(null);
+    let parallelBatchIndexes: number[] = [];
+    let shouldStop = false;
+
+    const runAtIndex = async (index: number) => {
+      if (hooks?.shouldStop?.()) {
+        shouldStop = true;
+        return;
+      }
+      const toolCall = parsedCalls[index];
+      const result = await this.executeToolCall(sessionId, toolCall, hooks);
+      executionsByIndex[index] = { toolCallId: toolCall.id, content: this.formatToolResult(result), result };
+      if (hooks?.shouldStop?.()) {
+        shouldStop = true;
+      }
+    };
+
+    const flushParallelBatch = async () => {
+      if (parallelBatchIndexes.length === 0 || shouldStop) {
+        parallelBatchIndexes = [];
+        return;
+      }
+
+      const batch = parallelBatchIndexes;
+      parallelBatchIndexes = [];
+      await Promise.all(batch.map((index) => runAtIndex(index)));
+    };
+
+    for (let index = 0; index < parsedCalls.length; index += 1) {
+      if (shouldStop || hooks?.shouldStop?.()) {
+        shouldStop = true;
+        break;
+      }
+
+      const toolCall = parsedCalls[index];
+      if (this.canRunInParallel(toolCall.function.name)) {
+        parallelBatchIndexes.push(index);
+        continue;
+      }
+
+      await flushParallelBatch();
+      if (shouldStop || hooks?.shouldStop?.()) {
+        shouldStop = true;
+        break;
+      }
+
+      await runAtIndex(index);
+    }
+
+    await flushParallelBatch();
+    return executionsByIndex.filter((execution): execution is ToolCallExecution => Boolean(execution));
+  }
+
+  private async executeSequentialToolCalls(
+    sessionId: string,
+    parsedCalls: ToolCall[],
+    hooks?: ToolExecutionHooks
+  ): Promise<ToolCallExecution[]> {
+    const executions: ToolCallExecution[] = [];
+    for (const toolCall of parsedCalls) {
+      if (hooks?.shouldStop?.()) break;
+      const result = await this.executeToolCall(sessionId, toolCall, hooks);
+      executions.push({ toolCallId: toolCall.id, content: this.formatToolResult(result), result });
+      if (hooks?.shouldStop?.()) break;
+    }
+    return executions;
+  }
+
+  private canRunInParallel(toolName: string): boolean {
+    const normalizedName = BUILT_IN_TOOL_NAME_ALIASES.get(toolName) ?? toolName;
+    if (SERIAL_TOOL_NAMES.has(normalizedName)) {
+      return false;
+    }
+    return PARALLEL_SAFE_TOOL_NAMES.has(normalizedName);
   }
 
   private registerToolHandlers(): void {
@@ -245,6 +323,8 @@ export class ToolExecutor {
         onBeforeFileMutation: hooks?.onBeforeFileMutation,
         onAfterFileMutation: hooks?.onAfterFileMutation,
         onNeedsWebSearchSetup: hooks?.onNeedsWebSearchSetup,
+        bashTimeoutMs: hooks?.bashTimeoutMs,
+        bashMinTimeoutMs: hooks?.bashMinTimeoutMs,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -302,6 +382,6 @@ export class ToolExecutor {
       payload.awaitUserResponse = true;
     }
 
-    return JSON.stringify(payload, null, 2);
+    return JSON.stringify(payload);
   }
 }

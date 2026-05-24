@@ -6,6 +6,7 @@ import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
 const execFileAsync = promisify(execFile);
 
 const MAX_MATCHES = 200;
+const MAX_MATCH_COUNT = MAX_MATCHES + 1;
 const SEARCH_TIMEOUT_MS = 15_000;
 
 type GrepMatch = {
@@ -49,7 +50,11 @@ export async function handleGrepTool(
   const caseSensitive = args.case_sensitive === true;
   const contextLines = typeof args.context_lines === "number" ? Math.min(Math.max(0, args.context_lines), 10) : 0;
 
-  const rgArgs: string[] = ["--json", "--max-filesize", "1M"];
+  const rgArgs: string[] = ["--json", "--max-filesize", "1M", "--max-count", String(MAX_MATCH_COUNT)];
+
+  if (isLiteralPattern(pattern)) {
+    rgArgs.push("--fixed-strings");
+  }
 
   if (!caseSensitive) rgArgs.push("--ignore-case");
   if (contextLines > 0) rgArgs.push("--context", String(contextLines));
@@ -86,9 +91,19 @@ export async function handleGrepTool(
   return {
     ok: true,
     name: "Grep",
-    output: JSON.stringify({ matches: displayed, total_count: matches.length, truncated }, null, 2),
+    output: JSON.stringify({ matches: displayed, total_count: matches.length, truncated }),
     metadata: { total_count: matches.length, truncated },
   };
+}
+
+function isLiteralPattern(pattern: string): boolean {
+  const regexMeta = new Set(["\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]);
+  for (const char of pattern) {
+    if (regexMeta.has(char)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function parseRgOutput(stdout: string, projectRoot: string): GrepMatch[] {

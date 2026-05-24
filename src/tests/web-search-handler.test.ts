@@ -138,10 +138,7 @@ test("WebSearch returns a configuration error when neither a script nor an LLM c
   const result = await handleWebSearchTool({ query: "latest node release" }, createContext(workspace));
 
   assert.equal(result.ok, false);
-  assert.equal(
-    result.error,
-    "WebSearch default mode requires a valid LLM configuration in ~/.doku/settings.json or ./.doku/settings.json."
-  );
+  assert.equal(result.error, "WebSearch is not configured. Please complete the web search setup that just opened.");
 });
 
 function createContext(
