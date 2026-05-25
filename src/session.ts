@@ -35,6 +35,8 @@ import {
   getBuiltinSkillPath,
   getBuiltinWorkflowSkillByName,
 } from "./common/builtin-skills";
+import { formatAskUserQuestionAnswers, type AskUserQuestionAnswers } from "./ui/askUserQuestion";
+import type { ToolCallExecution } from "./tools/executor";
 
 const MAX_SESSION_ENTRIES = 50;
 const DEFAULT_NEW_PROMPT_API_URL = "https://github.com/muddlebee/doku-deepseek-cli/api/plugin/new";
@@ -250,6 +252,8 @@ type SessionManagerOptions = {
   onMcpStatusChanged?: () => void;
   onProcessStdout?: (pid: number, chunk: string) => void;
   onNeedsWebSearchSetup?: () => void;
+  nonInteractive?: boolean;
+  maxTurns?: number;
 };
 
 export type LlmStreamProgress = {
@@ -277,6 +281,8 @@ export class SessionManager {
   private readonly onMcpStatusChanged?: () => void;
   private readonly onProcessStdout?: (pid: number, chunk: string) => void;
   private readonly onNeedsWebSearchSetup?: () => void;
+  private readonly nonInteractive: boolean;
+  private readonly maxTurns?: number;
   private activeSessionId: string | null = null;
   private activePromptController: AbortController | null = null;
   private readonly sessionControllers = new Map<string, AbortController>();
@@ -295,6 +301,8 @@ export class SessionManager {
     this.onMcpStatusChanged = options.onMcpStatusChanged;
     this.onProcessStdout = options.onProcessStdout;
     this.onNeedsWebSearchSetup = options.onNeedsWebSearchSetup;
+    this.nonInteractive = options.nonInteractive === true;
+    this.maxTurns = options.maxTurns;
     this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient, this.mcpManager);
     this.mcpManager.prepare(this.getResolvedSettings().mcpServers);
   }
@@ -1160,7 +1168,7 @@ ${skillMd}
     this.sessionControllers.set(sessionId, sessionController);
 
     try {
-      const maxIterations = 80000; // about 1K RMB cost
+      const maxIterations = this.maxTurns ?? 80000;
       let toolCalls: unknown[] | null = null;
 
       for (let iteration = 0; iteration < maxIterations; iteration++) {
@@ -1275,6 +1283,16 @@ ${skillMd}
         if (!toolCalls) {
           return;
         }
+      }
+
+      if (this.nonInteractive) {
+        this.updateSessionEntry(sessionId, (entry) => ({
+          ...entry,
+          status: "failed",
+          failReason: "max turns reached",
+          updateTime: new Date().toISOString(),
+        }));
+        return;
       }
 
       this.updateSessionEntry(sessionId, (entry) => ({
@@ -1407,11 +1425,14 @@ ${skillMd}
   private getPromptToolOptions(): { model: string; webSearchEnabled: boolean } {
     return {
       model: this.getResolvedSettings().model,
-      webSearchEnabled: true,
+      webSearchEnabled: !this.nonInteractive,
     };
   }
 
   private reportNewPrompt(): void {
+    if (this.nonInteractive) {
+      return;
+    }
     const { machineId } = this.createOpenAIClient();
     if (!machineId) {
       return;
@@ -2010,6 +2031,47 @@ ${skillMd}
     };
   }
 
+  private buildAutoAskUserQuestionReply(sessionId: string, execution: ToolCallExecution): SessionMessage | null {
+    const metadata = execution.result.metadata;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return null;
+    }
+    const record = metadata as { kind?: unknown; questions?: unknown };
+    if (record.kind !== "ask_user_question" || !Array.isArray(record.questions)) {
+      return null;
+    }
+
+    const answers: AskUserQuestionAnswers = {};
+    for (const item of record.questions) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        continue;
+      }
+      const question =
+        typeof (item as { question?: unknown }).question === "string"
+          ? (item as { question: string }).question.trim()
+          : "";
+      const options = (item as { options?: unknown }).options;
+      if (!question || !Array.isArray(options) || options.length === 0) {
+        continue;
+      }
+      const firstOption = options[0];
+      const label =
+        firstOption &&
+        typeof firstOption === "object" &&
+        !Array.isArray(firstOption) &&
+        typeof (firstOption as { label?: unknown }).label === "string"
+          ? (firstOption as { label: string }).label.trim()
+          : "Other";
+      answers[question] = label || "Other";
+    }
+
+    if (Object.keys(answers).length === 0) {
+      return null;
+    }
+
+    return this.buildUserMessage(sessionId, { text: formatAskUserQuestionAnswers(answers) });
+  }
+
   private async appendToolMessages(sessionId: string, toolCalls: unknown[]): Promise<{ waitingForUser: boolean }> {
     const toolExecutions = await this.toolExecutor.executeToolCalls(sessionId, toolCalls, {
       onProcessStart: (pid, command) => this.addSessionProcess(sessionId, pid, command),
@@ -2018,7 +2080,11 @@ ${skillMd}
       onProcessTimeoutControl: (pid, control) => this.setSessionProcessTimeoutControl(sessionId, pid, control),
       onBeforeFileMutation: (filePath) => this.prepareFileMutationCheckpoint(sessionId, filePath),
       onAfterFileMutation: (filePath) => this.recordFileMutationCheckpoint(sessionId, filePath),
-      onNeedsWebSearchSetup: () => this.onNeedsWebSearchSetup?.(),
+      onNeedsWebSearchSetup: () => {
+        if (!this.nonInteractive) {
+          this.onNeedsWebSearchSetup?.();
+        }
+      },
       shouldStop: () => this.isInterrupted(sessionId),
     });
     if (this.isInterrupted(sessionId)) {
@@ -2028,7 +2094,17 @@ ${skillMd}
     const followUpMessages: SessionMessage[] = [];
     for (const execution of toolExecutions) {
       if (execution.result.awaitUserResponse === true) {
-        waitingForUser = true;
+        if (this.nonInteractive) {
+          const autoReply = this.buildAutoAskUserQuestionReply(sessionId, execution);
+          if (autoReply) {
+            this.appendSessionMessage(sessionId, autoReply);
+            this.onAssistantMessage(autoReply, false);
+          } else {
+            waitingForUser = true;
+          }
+        } else {
+          waitingForUser = true;
+        }
       }
       const toolFunction = this.findToolFunction(toolCalls, execution.toolCallId);
       const toolMessage = this.buildToolMessage(sessionId, execution.toolCallId, execution.content, toolFunction);

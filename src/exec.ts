@@ -10,6 +10,8 @@ export type ExecOptions = {
   cwd: string;
   nonInteractive: boolean;
   timeoutSec?: number;
+  maxTurns?: number;
+  enableMcp?: boolean;
 };
 
 export type ExecParseResult =
@@ -31,6 +33,8 @@ export function printExecHelp(): void {
       "  --non-interactive         Required for headless runs (implicit with exec)",
       "  --cwd <path>              Working directory (default: current directory)",
       "  --timeout-sec <seconds>   Abort the run after this many seconds",
+      "  --max-turns <count>       Limit model turns (default: unlimited in exec)",
+      "  --mcp                     Enable MCP servers from settings (disabled by default)",
       "  --help, -h                Show this help",
       "",
       "Environment:",
@@ -52,6 +56,8 @@ export function parseExecArgs(args: string[]): ExecParseResult {
   let prompt: string | undefined;
   let cwd: string | undefined;
   let timeoutSec: number | undefined;
+  let maxTurns: number | undefined;
+  let enableMcp = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -89,6 +95,23 @@ export function parseExecArgs(args: string[]): ExecParseResult {
     if (arg === "--non-interactive") {
       continue;
     }
+    if (arg === "--mcp") {
+      enableMcp = true;
+      continue;
+    }
+    if (arg === "--max-turns") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("-")) {
+        return { ok: false, error: "Missing value for --max-turns.", exitCode: 2 };
+      }
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return { ok: false, error: "--max-turns must be a positive integer.", exitCode: 2 };
+      }
+      maxTurns = parsed;
+      index += 1;
+      continue;
+    }
     return { ok: false, error: `Unknown argument: ${arg}`, exitCode: 2 };
   }
 
@@ -111,6 +134,8 @@ export function parseExecArgs(args: string[]): ExecParseResult {
       cwd: resolvedCwd,
       nonInteractive: true,
       timeoutSec,
+      maxTurns,
+      enableMcp,
     },
   };
 }
@@ -149,13 +174,26 @@ export async function runExec(options: ExecOptions): Promise<number> {
   const sessionManager = new SessionManager({
     projectRoot,
     createOpenAIClient: () => createOpenAIClient(projectRoot),
-    getResolvedSettings: () => resolveCurrentSettings(projectRoot),
+    getResolvedSettings: () => {
+      const resolved = resolveCurrentSettings(projectRoot);
+      if (options.enableMcp) {
+        return resolved;
+      }
+      return {
+        ...resolved,
+        mcpServers: undefined,
+      };
+    },
     renderMarkdown: (text) => text,
     onAssistantMessage: () => {},
+    nonInteractive: true,
+    maxTurns: options.maxTurns,
   });
 
   try {
-    await sessionManager.initMcpServers(settings.mcpServers);
+    if (options.enableMcp) {
+      await sessionManager.initMcpServers(settings.mcpServers);
+    }
     const runPromise = sessionManager.handleUserPrompt({ text: options.prompt });
     if (options.timeoutSec != null) {
       const timeoutMs = options.timeoutSec * 1000;

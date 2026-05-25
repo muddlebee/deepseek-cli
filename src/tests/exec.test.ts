@@ -42,6 +42,15 @@ test("parseExecArgs rejects invalid timeout", () => {
   }
 });
 
+test("parseExecArgs parses max-turns and mcp flag", () => {
+  const result = parseExecArgs(["--prompt", "hello", "--max-turns", "25", "--mcp"]);
+  assert.equal(result.ok, true);
+  if (result.ok && !result.help) {
+    assert.equal(result.options.maxTurns, 25);
+    assert.equal(result.options.enableMcp, true);
+  }
+});
+
 test("getExecExitCodeForStatus maps completed to 0", () => {
   assert.equal(getExecExitCodeForStatus("completed"), 0);
   assert.equal(getExecExitCodeForStatus("failed"), 1);

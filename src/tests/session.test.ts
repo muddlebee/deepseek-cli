@@ -1372,6 +1372,72 @@ test("replySession /continue runs trailing pending tool calls before requesting 
   );
 });
 
+test("nonInteractive mode auto-answers AskUserQuestion and continues", async () => {
+  const workspace = createTempDir("doku-noninteractive-ask-");
+  const home = createTempDir("doku-noninteractive-ask-home-");
+  setHomeDir(home);
+
+  const responses: unknown[] = [
+    {
+      choices: [
+        {
+          message: {
+            content: "",
+            tool_calls: [
+              {
+                id: "call-ask",
+                type: "function",
+                function: {
+                  name: "AskUserQuestion",
+                  arguments: JSON.stringify({
+                    questions: [
+                      {
+                        question: "Which option?",
+                        options: [{ label: "First" }, { label: "Second" }],
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+    createChatResponse("done after auto answer", { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }),
+  ];
+
+  const manager = new SessionManager({
+    projectRoot: workspace,
+    createOpenAIClient: () => ({
+      client: {
+        chat: {
+          completions: {
+            create: async () => {
+              const response = responses.shift();
+              assert.ok(response, "expected a queued chat response");
+              return response;
+            },
+          },
+        },
+      } as any,
+      model: "test-model",
+      baseURL: "https://api.deepseek.com",
+      thinkingEnabled: false,
+    }),
+    getResolvedSettings: () => ({ model: "test-model" }),
+    renderMarkdown: (text) => text,
+    onAssistantMessage: () => {},
+    nonInteractive: true,
+  });
+
+  const sessionId = await manager.createSession({ text: "start" });
+  assert.equal(manager.getSession(sessionId)?.status, "completed");
+  const userMessages = manager.listSessionMessages(sessionId).filter((message) => message.role === "user");
+  assert.equal(userMessages.length, 2);
+  assert.match(userMessages[1]?.content ?? "", /First/);
+});
+
 test("replySession preserves raw session messages when a previous tool call is pending", async () => {
   const workspace = createTempDir("deepcode-pending-tool-workspace-");
   const home = createTempDir("deepcode-pending-tool-home-");
