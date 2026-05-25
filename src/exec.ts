@@ -155,6 +155,10 @@ export function parseExecArgs(args: string[]): ExecParseResult {
   };
 }
 
+export type ExecRuntimeOverrides = {
+  createSessionManager?: typeof createExecSessionManager;
+};
+
 export function createExecSessionManager(
   options: ExecOptions,
   hooks?: {
@@ -242,7 +246,7 @@ export function getExecExitCodeForStatus(status: SessionStatus | null | undefine
   return 1;
 }
 
-export async function runExec(options: ExecOptions): Promise<number> {
+export async function runExec(options: ExecOptions, overrides?: ExecRuntimeOverrides): Promise<number> {
   const previousCwd = process.cwd();
   if (options.cwd !== previousCwd) {
     process.chdir(options.cwd);
@@ -281,7 +285,8 @@ export async function runExec(options: ExecOptions): Promise<number> {
     });
   }
 
-  const sessionManager = createExecSessionManager(options, {
+  const createManager = overrides?.createSessionManager ?? createExecSessionManager;
+  const sessionManager = createManager(options, {
     onMessage: (message) => logExecMessage(runLogger, message),
     onSessionEntryUpdated: (entry) => logExecSessionUpdate(runLogger, entry),
   });
