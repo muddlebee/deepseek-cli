@@ -1,0 +1,1 @@
+Set config.json so the "enabled" field is true. Keep the same file structure and the "name" field unchanged.

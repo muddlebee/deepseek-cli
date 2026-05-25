@@ -1,0 +1,3 @@
+Fix the typo in message.txt so it reads exactly: Hello, doku smoke!
+
+Do not change anything else.
