@@ -44,6 +44,8 @@ npm run smoke
 
 Results land in `benchmarks/smoke/output/<timestamp>/` (`run.jsonl`, final workspace, `summary.json`).
 
+Reference run (3/3 pass, deepseek-v4-flash): `benchmarks/smoke/examples/2026-05-25__14-06-46/`.
+
 ## Score a log
 
 ```bash
