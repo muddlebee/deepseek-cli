@@ -1,9 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import { createOpenAIClient } from "./common/openai-client";
+import { RunLogger } from "./common/run-logger";
 import { setShellIfWindows } from "./common/shell-utils";
-import { SessionManager, type SessionStatus } from "./session";
+import { SessionManager, type SessionEntry, type SessionMessage, type SessionStatus } from "./session";
 import { resolveCurrentSettings } from "./ui/App";
+import pkg from "../package.json";
 
 export type ExecOptions = {
   prompt: string;
@@ -12,6 +14,7 @@ export type ExecOptions = {
   timeoutSec?: number;
   maxTurns?: number;
   enableMcp?: boolean;
+  outputPath?: string;
 };
 
 export type ExecParseResult =
@@ -35,6 +38,7 @@ export function printExecHelp(): void {
       "  --timeout-sec <seconds>   Abort the run after this many seconds",
       "  --max-turns <count>       Limit model turns (default: unlimited in exec)",
       "  --mcp                     Enable MCP servers from settings (disabled by default)",
+      "  --output <path>           Write JSONL run events to this file",
       "  --help, -h                Show this help",
       "",
       "Environment:",
@@ -58,6 +62,7 @@ export function parseExecArgs(args: string[]): ExecParseResult {
   let timeoutSec: number | undefined;
   let maxTurns: number | undefined;
   let enableMcp = false;
+  let outputPath: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -99,6 +104,15 @@ export function parseExecArgs(args: string[]): ExecParseResult {
       enableMcp = true;
       continue;
     }
+    if (arg === "--output") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("-")) {
+        return { ok: false, error: "Missing value for --output.", exitCode: 2 };
+      }
+      outputPath = path.resolve(value);
+      index += 1;
+      continue;
+    }
     if (arg === "--max-turns") {
       const value = args[index + 1];
       if (!value || value.startsWith("-")) {
@@ -136,8 +150,89 @@ export function parseExecArgs(args: string[]): ExecParseResult {
       timeoutSec,
       maxTurns,
       enableMcp,
+      outputPath,
     },
   };
+}
+
+export function createExecSessionManager(
+  options: ExecOptions,
+  hooks?: {
+    onMessage?: (message: SessionMessage) => void;
+    onSessionEntryUpdated?: (entry: SessionEntry) => void;
+  }
+): SessionManager {
+  const projectRoot = options.cwd;
+  return new SessionManager({
+    projectRoot,
+    createOpenAIClient: () => createOpenAIClient(projectRoot),
+    getResolvedSettings: () => {
+      const resolved = resolveCurrentSettings(projectRoot);
+      if (options.enableMcp) {
+        return resolved;
+      }
+      return {
+        ...resolved,
+        mcpServers: undefined,
+      };
+    },
+    renderMarkdown: (text) => text,
+    onAssistantMessage: (message) => {
+      hooks?.onMessage?.(message);
+    },
+    onSessionEntryUpdated: (entry) => {
+      hooks?.onSessionEntryUpdated?.(entry);
+    },
+    nonInteractive: true,
+    maxTurns: options.maxTurns,
+  });
+}
+
+function logExecMessage(runLogger: RunLogger | null, message: SessionMessage): void {
+  if (!runLogger) {
+    return;
+  }
+
+  if (message.role === "assistant") {
+    const toolCalls = (message.messageParams as { tool_calls?: unknown[] } | null)?.tool_calls;
+    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+      runLogger.emit({
+        type: "tool_call",
+        sessionId: message.sessionId,
+        toolCalls,
+      });
+      return;
+    }
+    if (message.content) {
+      runLogger.emit({
+        type: "assistant_message",
+        sessionId: message.sessionId,
+        content: message.content,
+      });
+    }
+    return;
+  }
+
+  if (message.role === "tool") {
+    runLogger.emit({
+      type: "tool_result",
+      sessionId: message.sessionId,
+      content: message.content,
+      function: message.meta?.function,
+    });
+  }
+}
+
+function logExecSessionUpdate(runLogger: RunLogger | null, entry: SessionEntry): void {
+  if (!runLogger) {
+    return;
+  }
+  runLogger.emit({
+    type: "session_status",
+    sessionId: entry.id,
+    status: entry.status,
+    failReason: entry.failReason,
+  });
 }
 
 export function getExecExitCodeForStatus(status: SessionStatus | null | undefined): number {
@@ -171,24 +266,27 @@ export async function runExec(options: ExecOptions): Promise<number> {
     return 2;
   }
 
-  const sessionManager = new SessionManager({
-    projectRoot,
-    createOpenAIClient: () => createOpenAIClient(projectRoot),
-    getResolvedSettings: () => {
-      const resolved = resolveCurrentSettings(projectRoot);
-      if (options.enableMcp) {
-        return resolved;
-      }
-      return {
-        ...resolved,
-        mcpServers: undefined,
-      };
-    },
-    renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
-    nonInteractive: true,
-    maxTurns: options.maxTurns,
+  const startedAt = Date.now();
+  const runLogger = options.outputPath ? new RunLogger(options.outputPath) : null;
+  const version = typeof pkg.version === "string" ? pkg.version : "unknown";
+
+  if (runLogger) {
+    runLogger.emit({
+      type: "session_start",
+      prompt: options.prompt,
+      cwd: options.cwd,
+      model: settings.model,
+      version,
+      maxTurns: options.maxTurns ?? null,
+    });
+  }
+
+  const sessionManager = createExecSessionManager(options, {
+    onMessage: (message) => logExecMessage(runLogger, message),
+    onSessionEntryUpdated: (entry) => logExecSessionUpdate(runLogger, entry),
   });
+
+  let exitCode = 1;
 
   try {
     if (options.enableMcp) {
@@ -219,11 +317,12 @@ export async function runExec(options: ExecOptions): Promise<number> {
   } catch (error) {
     if (error instanceof Error && error.message === "timeout") {
       process.stderr.write("doku exec: timed out.\n");
-      return 1;
+      exitCode = 1;
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`doku exec: ${message}\n`);
+      exitCode = 1;
     }
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`doku exec: ${message}\n`);
-    return 1;
   } finally {
     sessionManager.dispose();
     if (options.cwd !== previousCwd) {
@@ -232,6 +331,21 @@ export async function runExec(options: ExecOptions): Promise<number> {
   }
 
   const sessionId = sessionManager.getActiveSessionId();
-  const status = sessionId ? sessionManager.getSession(sessionId)?.status : null;
-  return getExecExitCodeForStatus(status);
+  const session = sessionId ? sessionManager.getSession(sessionId) : null;
+  exitCode = getExecExitCodeForStatus(session?.status);
+
+  if (runLogger) {
+    runLogger.emit({
+      type: "session_end",
+      sessionId,
+      status: session?.status ?? null,
+      exitCode,
+      durationMs: Date.now() - startedAt,
+      model: settings.model,
+      usage: session?.usage ?? null,
+      failReason: session?.failReason ?? null,
+    });
+  }
+
+  return exitCode;
 }
