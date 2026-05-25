@@ -1,0 +1,1 @@
+In math.js, export a function named sum that adds two numbers. Do not add tests or extra files.

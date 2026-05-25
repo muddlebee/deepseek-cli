@@ -1,0 +1,56 @@
+[
+  {
+    "task": "add-sum-fn",
+    "harnessExit": 0,
+    "verifyExit": 0,
+    "metrics": {
+      "events": 11,
+      "toolCalls": 2,
+      "toolResults": 2,
+      "exitCode": 0,
+      "status": "completed",
+      "failReason": null,
+      "durationMs": 8717,
+      "model": "deepseek-v4-flash",
+      "promptTokens": 29959,
+      "completionTokens": 260,
+      "totalTokens": 30219
+    }
+  },
+  {
+    "task": "fix-typo",
+    "harnessExit": 0,
+    "verifyExit": 0,
+    "metrics": {
+      "events": 14,
+      "toolCalls": 3,
+      "toolResults": 3,
+      "exitCode": 0,
+      "status": "completed",
+      "failReason": null,
+      "durationMs": 9579,
+      "model": "deepseek-v4-flash",
+      "promptTokens": 40469,
+      "completionTokens": 343,
+      "totalTokens": 40812
+    }
+  },
+  {
+    "task": "patch-json",
+    "harnessExit": 0,
+    "verifyExit": 0,
+    "metrics": {
+      "events": 11,
+      "toolCalls": 2,
+      "toolResults": 2,
+      "exitCode": 0,
+      "status": "completed",
+      "failReason": null,
+      "durationMs": 8738,
+      "model": "deepseek-v4-flash",
+      "promptTokens": 29981,
+      "completionTokens": 288,
+      "totalTokens": 30269
+    }
+  }
+]
